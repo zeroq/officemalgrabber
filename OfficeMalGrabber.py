@@ -13,7 +13,8 @@ import shutil
 import core.littleEndian as littleEndian
 import core.OleFileIO_PL as OleFileIO_PL
 
-
+__author__ = "holger huettl, jan goebel <goebel@pi-one.net>"
+__version__ = "0.0.1"
 
 
 def omg_unzip(path, extractionFolder):
