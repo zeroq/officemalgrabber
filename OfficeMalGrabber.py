@@ -8,6 +8,7 @@ import sys
 import imp
 import argparse
 import textwrap
+import shutil
 
 import core.littleEndian as littleEndian
 import core.OleFileIO_PL as OleFileIO_PL
@@ -15,28 +16,15 @@ import core.OleFileIO_PL as OleFileIO_PL
 
 
 
-def unzip(path, extractionFolder):
+def omg_unzip(path, extractionFolder):
     extractionFolder = os.path.abspath(extractionFolder)
     tempString = extractionFolder
     if not os.path.exists(extractionFolder):
         os.makedirs(extractionFolder)
-
     zfile = zipfile.ZipFile(path)
-
-    for name in zfile.namelist():
-        (dirname, filename) = os.path.split(name)
-        if filename == '':
-            continue
-        parts = dirname.rsplit('/')
-        for subFolder in parts:
-            if not os.path.exists(tempString + "/" + subFolder):
-                os.makedirs(tempString + "/" + subFolder)
-            tempString += ("/" + subFolder)
-        tempString = extractionFolder
-        fd = open(tempString + "/" + name, 'wb')
-        fd.write(zfile.read(name))
-        fd.close()
+    zfile.extractall(extractionFolder)
     zfile.close()
+    return extractionFolder
 
 def getFat(binaryContent, sectorsize):
     #buf = None
@@ -94,7 +82,6 @@ if __name__ == '__main__':
         filesToScan = [args.fileName]
 
 
-
     for fileName in filesToScan:
         #[PL]: added constants for Sector IDs (from AAF specifications)
         MAXREGSECT = 0xFFFFFFFAL; # maximum SECT
@@ -112,9 +99,12 @@ if __name__ == '__main__':
         print line
         try:
             Module_VBA = imp.load_source('Module_VBA', 'modules/VBA/Module_VBA.py')
+            print "checking file format ...",
+            sys.stdout.flush()
             if OleFileIO_PL.isOleFile(fileName):
-
                 fileFormat = '/OLE'
+                print fileFormat
+                sys.stdout.flush()
                 ole = OleFileIO_PL.OleFileIO(fileName)
                 '''attempt to scan for malware placed behind FAT-addressed storage
                 #the document being scanned is in the old OLE-format
@@ -156,49 +146,65 @@ if __name__ == '__main__':
                 #import modules/javascript/Module_Javascript
                 JSMod = Module_Javascript.JS_Mod(fileName, 1, docType )
                 JSMod.locateJavascriptSource()
-
+                extractionFolder = None
             else:
                 #the document being scanned is in the new xml-based format
                 fileFormat = '/XML'
+                print fileFormat
+                sys.stdout.flush()
+
+                """ determine folder where to extract XML parts """
                 folderName = fileName.split('.')[0].split('/')[-1]
                 folderName = args.extractionFolder + '/' + folderName
                 if args.extractionFolder == '.':
                     folderName = fileName.split('.')[0]
 
-                try:
-                    unzip(fileName, folderName)
-                except zipfile.BadZipfile:
-                    print 'failed to extract XML-based document:', fileName
+                if zipfile.is_zipfile(fileName):
+                    print "extracting file ...",
+                    sys.stdout.flush()
+                    try:
+                        extractionFolder = omg_unzip(fileName, folderName)
+                    except zipfile.BadZipfile:
+                        print
+                        print 'failed to extract XML-based document:', fileName
+                        continue
+                    print "done"
+                    sys.stdout.flush()
+                else:
+                    print "this is not a zip file"
                     continue
 
-
-
-                if os.path.exists(folderName + "\\word"):
+                if os.path.exists(os.path.join(folderName, "word")):
                     docType = '/word'
-                elif os.path.exists(folderName + "\\xl"):
+                elif os.path.exists(os.path.join(folderName, "xl")):
                     docType = '/xl'
-                elif os.path.exists(folderName + "\\ppt"):
+                elif os.path.exists(os.path.join(folderName, "ppt")):
                     docType = '/ppt'
                 else:
-                    print 'could not determine filetype, skipping this file'
+                    print 'could not determine filetype, skipping this file (%s)' % (folderName)
                     continue
 
                 #search for VBA-Macros
+                print "searching for VBA ...",
+                sys.stdout.flush()
                 extractor = Module_VBA.VBA_Mod(folderName, 0, docType)
                 extractor.extractMacroCode()
 
                 #search for flash-objects
+                print "searching for FLASH ...",
+                sys.stdout.flush()
                 Module_Flashobject = imp.load_source('Module_Flashobject', 'modules/flash/Module_Flashobject.py')
                 #import modules/flash/Module_Flashobject
                 flashMod = Module_Flashobject.Flash_Mod(folderName, 0, docType )
                 flashMod.locateFlashObjects()
 
                 #search for javascript aka MS scriptlett-component
+                print "searching for JavaScript ...",
+                sys.stdout.flush()
                 Module_Javascript = imp.load_source('Module_Javascript', 'modules/javascript/Module_Javascript.py')
                 #import modules/javascript/Module_Javascript
                 JSMod = Module_Javascript.JS_Mod(folderName, 0, docType )
                 JSMod.locateJavascriptSource()
-
 
             #load and run cve-detection-plugins, which are suitable for the current document file
 
@@ -208,10 +214,19 @@ if __name__ == '__main__':
                 #fileName: path to the document being scanned
                 #doctype: defines wether the document is a word-, excel- or powerpoint-document
             #be sure too add this wrapper to your newly created plugins
+            print "loading plugins ...",
+            sys.stdout.flush()
             pluginLoader = imp.load_source('pluginLoader', 'modules/CVE_detection/pluginLoader.py')
             detectors = pluginLoader.pluginLoader(fileFormat, docType, fileName)
+            print "done"
+            sys.stdout.flush()
             detectors.runDetectors()
             print line
+            if extractionFolder:
+                try:
+                    shutil.rmtree(extractionFolder)
+                except StandardError as e:
+                    print e
         except IOError as e:
             for arg in e.args:
                 if 'malformed OLE' in arg:
