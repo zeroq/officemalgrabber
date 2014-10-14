@@ -5,7 +5,7 @@ import os
 import imp
 
 class pluginLoader:
-    def __init__(self, fileFormat, docType, fileName):
+    def __init__(self, fileFormat, docType, fileName, extractionFolder):
         pathToPluginFiles = './modules/CVE_detection' + fileFormat + docType
         self.pluginFiles = []
         self.loadedPlugins = []
@@ -19,7 +19,7 @@ class pluginLoader:
 
         for plugin in self.pluginFiles:
             imported = imp.load_source(plugin.split('.')[0], pathToPluginFiles + '/' + plugin)
-            self.loadedPlugins += [imported.getNewInstance(fileName, docType)]
+            self.loadedPlugins += [imported.getNewInstance(fileName, docType, extractionFolder)]
 
     def runDetectors(self):
         for plugin in self.loadedPlugins:

@@ -218,14 +218,15 @@ if __name__ == '__main__':
             print "loading plugins ...",
             sys.stdout.flush()
             pluginLoader = imp.load_source('pluginLoader', 'modules/CVE_detection/pluginLoader.py')
-            detectors = pluginLoader.pluginLoader(fileFormat, docType, fileName)
+            detectors = pluginLoader.pluginLoader(fileFormat, docType, fileName, extractionFolder)
             print "done"
             sys.stdout.flush()
             detectors.runDetectors()
             print line
             if extractionFolder:
                 try:
-                    shutil.rmtree(extractionFolder)
+                    pass
+                    #shutil.rmtree(extractionFolder)
                 except StandardError as e:
                     print e
         except IOError as e:

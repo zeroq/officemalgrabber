@@ -6,13 +6,13 @@ import imp
 import core.littleEndian as littleEndian
 import core.OleFileIO_PL as OleFileIO_PL
 
-def getNewInstance(fileName, docType):
-    return CVE_2010_822_detector(fileName)
+def getNewInstance(fileName, docType, extractionFolder):
+    return CVE_2010_822_detector(fileName, extractionFolder)
 
 
 class CVE_2010_822_detector:
 
-    def __init__(self, fileName):
+    def __init__(self, fileName, extractionFolder):
         self.ole = None
         #import excel_structures
         self.excel_structures = imp.load_source('excel_structures', 'modules/OLE_parsing/excel_structures.py')

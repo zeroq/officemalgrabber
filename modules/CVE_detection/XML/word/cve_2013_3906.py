@@ -4,8 +4,8 @@
 import os
 import fnmatch
 
-def getNewInstance(fileName, docType):
-	return CVE_2013_3906_detector(fileName, docType)
+def getNewInstance(fileName, docType, extractionFolder):
+	return CVE_2013_3906_detector(fileName, docType, extractionFolder)
 
 
 class CVE_2013_3906_detector:
@@ -14,7 +14,7 @@ class CVE_2013_3906_detector:
 	docType = ''
 	MSTabStripClassID = '1EFB6596-857C-11D1-B16A-00C0F0283628'
 
-	def __init__(self, fileName, docType):
+	def __init__(self, fileName, docType, extractionFolder):
 		self.pathToActiveX = './' + fileName.split('.')[0] + docType + '/activeX'
 		self.fileName = fileName
 		self.docType = docType
@@ -63,4 +63,4 @@ class CVE_2013_3906_detector:
 
 		#the thresholds of 300 and 200 were randomly chosen and should be set to a more sophisticated value
 		if tabStripCounter > 300 and sameSize > 200:
-			print 'found an exploit for CVE-2013-3906!'
+			print '>> found an exploit for CVE-2013-3906!'
