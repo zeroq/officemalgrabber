@@ -121,13 +121,15 @@ class VBA_Mod:
             #find the Offsets in the Module Streams, where the textual reprensentation of the macrocode starts
             listCodeOffsets = []
             for offsets in listModuleOffsetRecords:
-                codeOffset = ord(decompressedDir[offsets+9]) << 24
-                codeOffset += ord(decompressedDir[offsets+8]) << 16
-                codeOffset += ord(decompressedDir[offsets+7]) << 8
-                codeOffset += ord(decompressedDir[offsets+6])
+                try:
+                    codeOffset = ord(decompressedDir[offsets+9]) << 24
+                    codeOffset += ord(decompressedDir[offsets+8]) << 16
+                    codeOffset += ord(decompressedDir[offsets+7]) << 8
+                    codeOffset += ord(decompressedDir[offsets+6])
+                except:
+                    continue
 
                 listCodeOffsets.append(codeOffset)
-
 
             listEncodedMacroCode = []
             current = 0
@@ -142,7 +144,10 @@ class VBA_Mod:
                 else:
                     print path, 'does\'t exist'
 
-                codeBuffer = codeBuffer[listCodeOffsets[current]+1:]
+                try:
+                    codeBuffer = codeBuffer[listCodeOffsets[current]+1:]
+                except IndexError:
+                    continue
                 chunkList = []
                 #find all chunks, which follow after each other
                 #0x00 will be at the end of the last chunk
