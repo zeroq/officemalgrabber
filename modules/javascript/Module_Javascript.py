@@ -15,7 +15,7 @@ class JS_Mod:
     mode = 0
     MSscriptletClassID = 'AE24FDAE-03C6-11D1-8B76-0080C744F389'
 
-    def __init__(self, fileName, mode, docType):
+    def __init__(self, fileName, mode, docType, args):
         self.pathToActiveX = './' + fileName.split('.')[0] + docType + '/activeX'
         if mode == 0:
             #XML format case
@@ -23,6 +23,7 @@ class JS_Mod:
         self.fileName = fileName
         self.mode = mode
         self.docType = docType
+        self.args = args
 
     def locateJavascriptSource(self):
         foundScripttlet = False
@@ -46,7 +47,8 @@ class JS_Mod:
                 #the Class-ID: AE24FDAE-03C6-11D1-8B76-0080C744F389 identifies an activeX-control as flash-object
                 if self.MSscriptletClassID in controlText:
                     foundScripttlet = True
-                    print activeXcontrol + ' is a MS-Scriptlet!'
+                    if not self.args.quiet:
+                        print activeXcontrol + ' is a MS-Scriptlet!'
                     activeXBinFileName = activeXcontrol[:-3]
                     activeXBinFileName += 'bin'
                     activeXContainers.append(activeXBinFileName)
@@ -69,7 +71,8 @@ class JS_Mod:
                 wordDocStream = ole.openstream('WordDocument')
                 wordDocBuffer = wordDocStream.read()
                 if 'CONTROL ScriptBridge.ScriptBridge' in wordDocBuffer:
-                    print 'use of MS Scriptlet detected'
+                    if not self.args.quiet:
+                        print 'use of MS Scriptlet detected'
 
                     listOCXContents = []
                     listOLEPaths = ole.listdir()
@@ -86,7 +89,8 @@ class JS_Mod:
                             pathLength = littleEndian.readInt(contentBuffer, 18)
                             for character in range(22, 22+(pathLength*2), 2):
                                 pathToSourceFile = pathToSourceFile + contentBuffer[character]
-                            print 'path to source file: ', pathToSourceFile
+                            if not self.args.quiet:
+                                print 'path to source file: ', pathToSourceFile
                         OCXStream.close()
 
             elif self.docType == '/xl':
@@ -120,9 +124,10 @@ class JS_Mod:
                             pathLength = littleEndian.readInt(contentBuffer, 18)
                             for character in range(22, 22+(pathLength*2), 2):
                                 pathToSourceFile = pathToSourceFile + contentBuffer[character]
-                            print 'path to source file: ', pathToSourceFile
+                            if not self.args.quiet:
+                                print 'path to source file: ', pathToSourceFile
                         OCXStream.close()
                         currentStorage.close()
 
-        if not foundScripttlet:
+        if not foundScripttlet and not self.args.quiet:
             print 'no Javascript/Scriptlett detected'

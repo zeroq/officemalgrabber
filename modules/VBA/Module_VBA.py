@@ -15,11 +15,12 @@ class VBA_Mod:
     fileName = ''
     mode = 0
     docType = ''
-    def __init__(self, fileName, mode, docType, extractionFolder=None):
+    def __init__(self, fileName, mode, docType, args):
         self.fileName = fileName
         self.mode = mode
         self.docType = docType
-        self.extractionFolder = extractionFolder
+        self.extractionFolder = args.extractionFolder
+        self.args = args
 
     def getCompressedChunkLength(self, blob):
         chunkLength = littleEndian.readShort(blob, 0)
@@ -34,7 +35,8 @@ class VBA_Mod:
         prefix = ''
         if self.mode == 0:
             if not os.path.exists(fileName + self.docType + '/vbaProject.bin'):
-                print 'found no macro-code'
+                if not self.args.quiet:
+                    print 'found no macro-code'
                 return
             assert OleFileIO_PL.isOleFile(fileName + self.docType + '/vbaProject.bin')
 
@@ -53,7 +55,8 @@ class VBA_Mod:
                 prefix = 'Macros/VBA/'
             elif self.docType == '/ppt':
                 prefix = 'VBA/'
-                print 'extracting VBA-Storage...'
+                if not self.args.quiet:
+                    print 'extracting VBA-Storage...'
                 current_user_stream = ole.openstream('Current User').read()
                 document_stream = ole.openstream('PowerPoint Document').read()
                 ppt_structures = imp.load_source('ppt_structures', 'modules/OLE_parsing/ppt_structures.py')
@@ -70,14 +73,12 @@ class VBA_Mod:
                         openOleFile = OleFileIO_PL.OleFileIO(externalOleObjectStorage)
                         oleFileList += [openOleFile]
 
-
         for ole in oleFileList:
 
             if ole.exists(prefix+'dir'):
                     dir = ole.openstream(prefix+'dir')
                     content = dir.read()
                     dir.close()
-
             else:
                 ole.close()
                 continue
@@ -102,7 +103,6 @@ class VBA_Mod:
                 listModuleOffsetRecords.append(foundAt)
                 current = foundAt+1
 
-
             #find the name of the modules/streams corresponding to the found Module Offsets
             listModuleNames = []
             start = 0
@@ -117,7 +117,6 @@ class VBA_Mod:
                     moduleName += decompressedDir[index + 6 + nameCharacter]
                 listModuleNames.append(moduleName)
                 start = listModuleOffsetRecords[count]
-
 
             #find the Offsets in the Module Streams, where the textual reprensentation of the macrocode starts
             listCodeOffsets = []
@@ -139,11 +138,13 @@ class VBA_Mod:
                 path = prefix + moduleName
 
                 if ole.exists(path):
-                    print 'decoding module:', moduleName
+                    if not self.args.quiet:
+                        print 'decoding module:', moduleName
                     oleStream = ole.openstream(path)
                     codeBuffer = oleStream.read()
                 else:
-                    print path, 'does\'t exist'
+                    if not self.args.quiet:
+                        print path, 'does\'t exist'
 
                 try:
                     codeBuffer = codeBuffer[listCodeOffsets[current]+1:]
@@ -167,17 +168,15 @@ class VBA_Mod:
             elif self.extractionFolder == '.':
                 folderName1 = self.fileName.rsplit('/', 1)[1].split('.')[0]
             else:
-                folderName1 = self.extractionFolder+self.fileName.rsplit('/', 1)[1].split('.')[0]
+                folderName1 = os.path.join(self.extractionFolder, self.fileName.rsplit('/', 1)[1].split('.')[0])
 
             if self.mode == 1:
                 #OLE case
-                #folderName = os.path.abspath(self.fileName.split('.')[0])
                 folderName = os.path.abspath(folderName1)
                 if not os.path.exists(folderName):
                     os.makedirs(folderName)
             else:
                 folderName = folderName1
-            print folderName
 
             decodedMacroCode = open(os.path.abspath(folderName + '/macroCode.txt'), 'a')
             codeSequences = []
@@ -193,7 +192,8 @@ class VBA_Mod:
                 decodedMacroCode.write('\r\n\r\n\r\n\r\n')
 
             decodedMacroCode.close()
-            print 'saved macrocode to file:', os.path.abspath(folderName + '/macroCode.txt')
+            if not self.args.quiet:
+                print 'saved macrocode to file:', os.path.abspath(folderName + '/macroCode.txt')
             foundMacroCode = True
 
             '''blackList = ["kernel32" , "CreateThread", "VirtualAlloc", "RtlMoveMemory"]
@@ -212,5 +212,7 @@ class VBA_Mod:
 
             ole.close()
 
-        if not foundMacroCode:
+        if not foundMacroCode and not self.args.quiet:
             print 'found no macro-code'
+        elif foundMacroCode:
+            print '>> macro code detected!'

@@ -28,9 +28,6 @@ def omg_unzip(path, extractionFolder):
     return extractionFolder
 
 def getFat(binaryContent, sectorsize):
-    #buf = None
-    #with open(fileName, 'rb') as file:
-    #   buf = file.read()
     header = binaryContent[76:sectorsize]
     fatSectors = []
     current = 0
@@ -64,12 +61,13 @@ if __name__ == '__main__':
     --extractionFolder {folder to use, if files are created/unzipped during scan}
     -e                 {folder to use, if files are created/unzipped during scan}
     '''
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-    description=textwrap.dedent(helpText))
+    #parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=textwrap.dedent(helpText))
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter)
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--fileName','-f', type=str)
     group.add_argument('--recursive', '-r', type=str)
     parser.add_argument('--extractionFolder', '-e', type=str, default='.')
+    parser.add_argument('--quiet','-q', action="store_true")
     args = parser.parse_args()
     filesToScan = []
     if not args.recursive and not args.fileName:
@@ -95,17 +93,22 @@ if __name__ == '__main__':
         doubleLine = '='*60
         fileFormat = ''
         docType = ''
-        print doubleLine
-        print 'document-file:', fileName
-        print line
+        if not args.quiet:
+            print doubleLine
+        print 'scanning document-file:', fileName
+        if not args.quiet:
+            print line
+        sys.stdout.flush()
         try:
             Module_VBA = imp.load_source('Module_VBA', 'modules/VBA/Module_VBA.py')
-            print "checking file format ...",
+            if not args.quiet:
+                print "checking file format ...",
             sys.stdout.flush()
             if OleFileIO_PL.isOleFile(fileName):
                 fileFormat = '/OLE'
-                print fileFormat
-                sys.stdout.flush()
+                if not args.quiet:
+                    print fileFormat
+                    sys.stdout.flush()
                 ole = OleFileIO_PL.OleFileIO(fileName)
                 '''attempt to scan for malware placed behind FAT-addressed storage
                 #the document being scanned is in the old OLE-format
@@ -137,22 +140,23 @@ if __name__ == '__main__':
                     #skip this file as it is probably an activeX.bin
                     continue
 
-                extractor = Module_VBA.VBA_Mod(fileName, 1, docType, args.extractionFolder)
+                extractor = Module_VBA.VBA_Mod(fileName, 1, docType, args)
                 extractor.extractMacroCode()
                 Module_Flashobject = imp.load_source('Module_Flashobject', 'modules/flash/Module_Flashobject.py')
                 #import modules/flash/Module_Flashobject
-                flashMod = Module_Flashobject.Flash_Mod(fileName, 1, docType )
+                flashMod = Module_Flashobject.Flash_Mod(fileName, 1, docType, args)
                 flashMod.locateFlashObjects()
                 Module_Javascript = imp.load_source('Module_Javascript', 'modules/javascript/Module_Javascript.py')
                 #import modules/javascript/Module_Javascript
-                JSMod = Module_Javascript.JS_Mod(fileName, 1, docType )
+                JSMod = Module_Javascript.JS_Mod(fileName, 1, docType, args)
                 JSMod.locateJavascriptSource()
                 extractionFolder = None
             else:
                 #the document being scanned is in the new xml-based format
                 fileFormat = '/XML'
-                print fileFormat
-                sys.stdout.flush()
+                if not args.quiet:
+                    print fileFormat
+                    sys.stdout.flush()
 
                 """ determine folder where to extract XML parts """
                 folderName = fileName.split('.')[0].split('/')[-1]
@@ -161,15 +165,17 @@ if __name__ == '__main__':
                     folderName = fileName.split('.')[0]
 
                 if zipfile.is_zipfile(fileName):
-                    print "extracting file ...",
-                    sys.stdout.flush()
+                    if not args.quiet:
+                        print "extracting file ...",
+                        sys.stdout.flush()
                     try:
                         extractionFolder = omg_unzip(fileName, folderName)
                     except zipfile.BadZipfile:
                         print
                         print 'failed to extract XML-based document:', fileName
                         continue
-                    print "done"
+                    if not args.quiet:
+                        print "done"
                     sys.stdout.flush()
                 else:
                     print "this is not a zip file"
@@ -186,25 +192,28 @@ if __name__ == '__main__':
                     continue
 
                 #search for VBA-Macros
-                print "searching for VBA ...",
-                sys.stdout.flush()
-                extractor = Module_VBA.VBA_Mod(folderName, 0, docType, args.extractionFolder)
+                if not args.quiet:
+                    print "searching for VBA ...",
+                    sys.stdout.flush()
+                extractor = Module_VBA.VBA_Mod(folderName, 0, docType, args)
                 extractor.extractMacroCode()
 
                 #search for flash-objects
-                print "searching for FLASH ...",
-                sys.stdout.flush()
+                if not args.quiet:
+                    print "searching for FLASH ...",
+                    sys.stdout.flush()
                 Module_Flashobject = imp.load_source('Module_Flashobject', 'modules/flash/Module_Flashobject.py')
                 #import modules/flash/Module_Flashobject
-                flashMod = Module_Flashobject.Flash_Mod(folderName, 0, docType )
+                flashMod = Module_Flashobject.Flash_Mod(folderName, 0, docType, args)
                 flashMod.locateFlashObjects()
 
                 #search for javascript aka MS scriptlett-component
-                print "searching for JavaScript ...",
-                sys.stdout.flush()
+                if not args.quiet:
+                    print "searching for JavaScript ...",
+                    sys.stdout.flush()
                 Module_Javascript = imp.load_source('Module_Javascript', 'modules/javascript/Module_Javascript.py')
                 #import modules/javascript/Module_Javascript
-                JSMod = Module_Javascript.JS_Mod(folderName, 0, docType )
+                JSMod = Module_Javascript.JS_Mod(folderName, 0, docType, args)
                 JSMod.locateJavascriptSource()
 
             #load and run cve-detection-plugins, which are suitable for the current document file
@@ -215,14 +224,17 @@ if __name__ == '__main__':
                 #fileName: path to the document being scanned
                 #doctype: defines wether the document is a word-, excel- or powerpoint-document
             #be sure too add this wrapper to your newly created plugins
-            print "loading plugins ...",
-            sys.stdout.flush()
+            if not args.quiet:
+                print "loading plugins ...",
+                sys.stdout.flush()
             pluginLoader = imp.load_source('pluginLoader', 'modules/CVE_detection/pluginLoader.py')
             detectors = pluginLoader.pluginLoader(fileFormat, docType, fileName, extractionFolder)
-            print "done"
-            sys.stdout.flush()
+            if not args.quiet:
+                print "done"
+                sys.stdout.flush()
             detectors.runDetectors()
-            print line
+            if not args.quiet:
+                print line
             if extractionFolder:
                 try:
                     pass
@@ -240,7 +252,8 @@ if __name__ == '__main__':
                     print 'document: ' +  os.path.abspath(fileName) + ' caused ' + str(type(e))
                     print e.args
                     break
-            print line
+            if not args.quiet:
+                print line
             continue
 
 
