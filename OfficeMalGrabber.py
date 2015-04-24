@@ -137,7 +137,7 @@ if __name__ == '__main__':
                     #skip this file as it is probably an activeX.bin
                     continue
 
-                extractor = Module_VBA.VBA_Mod(fileName, 1, docType)
+                extractor = Module_VBA.VBA_Mod(fileName, 1, docType, args.extractionFolder)
                 extractor.extractMacroCode()
                 Module_Flashobject = imp.load_source('Module_Flashobject', 'modules/flash/Module_Flashobject.py')
                 #import modules/flash/Module_Flashobject
@@ -188,7 +188,7 @@ if __name__ == '__main__':
                 #search for VBA-Macros
                 print "searching for VBA ...",
                 sys.stdout.flush()
-                extractor = Module_VBA.VBA_Mod(folderName, 0, docType)
+                extractor = Module_VBA.VBA_Mod(folderName, 0, docType, args.extractionFolder)
                 extractor.extractMacroCode()
 
                 #search for flash-objects

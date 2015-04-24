@@ -15,10 +15,11 @@ class VBA_Mod:
     fileName = ''
     mode = 0
     docType = ''
-    def __init__(self, fileName, mode, docType):
+    def __init__(self, fileName, mode, docType, extractionFolder=None):
         self.fileName = fileName
         self.mode = mode
         self.docType = docType
+        self.extractionFolder = extractionFolder
 
     def getCompressedChunkLength(self, blob):
         chunkLength = littleEndian.readShort(blob, 0)
@@ -161,14 +162,22 @@ class VBA_Mod:
                     current += 1
                 oleStream.close()
 
-            folderName = self.fileName
+            if not self.extractionFolder:
+                folderName1 = self.fileName.rsplit('.', 1)[0]
+            elif self.extractionFolder == '.':
+                folderName1 = self.fileName.rsplit('/', 1)[1].split('.')[0]
+            else:
+                folderName1 = self.extractionFolder+self.fileName.rsplit('/', 1)[1].split('.')[0]
 
             if self.mode == 1:
                 #OLE case
-                folderName = os.path.abspath(self.fileName.split('.')[0])
+                #folderName = os.path.abspath(self.fileName.split('.')[0])
+                folderName = os.path.abspath(folderName1)
                 if not os.path.exists(folderName):
                     os.makedirs(folderName)
-
+            else:
+                folderName = folderName1
+            print folderName
 
             decodedMacroCode = open(os.path.abspath(folderName + '/macroCode.txt'), 'a')
             codeSequences = []
