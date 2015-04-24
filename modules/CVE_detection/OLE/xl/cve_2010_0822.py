@@ -6,14 +6,16 @@ import imp
 import core.littleEndian as littleEndian
 import core.OleFileIO_PL as OleFileIO_PL
 
-def getNewInstance(fileName, docType, extractionFolder):
-    return CVE_2010_822_detector(fileName, extractionFolder)
+def getNewInstance(fileName, docType, extractionFolder, args, json_result):
+    return CVE_2010_822_detector(fileName, extractionFolder, args, json_result)
 
 
 class CVE_2010_822_detector:
 
-    def __init__(self, fileName, extractionFolder):
+    def __init__(self, fileName, extractionFolder, args, json_result):
         self.ole = None
+        self.json_result = json_result
+        self.args = args
         #import excel_structures
         self.excel_structures = imp.load_source('excel_structures', 'modules/OLE_parsing/excel_structures.py')
         if OleFileIO_PL.isOleFile(fileName):
@@ -45,13 +47,17 @@ class CVE_2010_822_detector:
                 if unusedSpace != 0:
                     #this space should not be used and should be 0x00000000
                     if unusedSpace & 0xFFF00000 == 0x30700000:
-                        print 'found exploit for CVE-2010-0822'
+                        if self.args.json:
+                            self.json_result['signatures'].append({'match': 'cve-2010-0822'})
+                        else:
+                            print 'found exploit for CVE-2010-0822'
                         break
 
     def checkIfMalformed(self, ObjRecord):
         if ObjRecord.validate() != 0:
-            print 'detected malformed Obj-Record'
-            print 'file might be an exploit for CVE-2010-0822'
+            if not self.args.json:
+                print 'detected malformed Obj-Record'
+                print 'file might be an exploit for CVE-2010-0822'
             return
 
 

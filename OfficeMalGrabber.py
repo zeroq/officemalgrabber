@@ -9,12 +9,13 @@ import imp
 import argparse
 import textwrap
 import shutil
+import json
 
 import core.littleEndian as littleEndian
 import core.OleFileIO_PL as OleFileIO_PL
 
 __author__ = "holger huettl, jan goebel <goebel@pi-one.net>"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 
 def omg_unzip(path, extractionFolder):
@@ -61,14 +62,15 @@ if __name__ == '__main__':
     --extractionFolder {folder to use, if files are created/unzipped during scan}
     -e                 {folder to use, if files are created/unzipped during scan}
     '''
-    #parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=textwrap.dedent(helpText))
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter)
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('--fileName','-f', type=str)
-    group.add_argument('--recursive', '-r', type=str)
-    parser.add_argument('--extractionFolder', '-e', type=str, default='.')
-    parser.add_argument('--quiet','-q', action="store_true")
+    group.add_argument('--fileName','-f', type=str, help='scan particular file')
+    group.add_argument('--recursive', '-r', type=str, help='recursively traverse given directory for files')
+    parser.add_argument('--extractionFolder', '-e', type=str, default='.', help='extract files such as macro code to this folder (default: current)')
+    parser.add_argument('--quiet','-q', action="store_true", help='disable noisy output')
+    parser.add_argument('--json','-j', action="store_true", help='output results in json format')
     args = parser.parse_args()
+    json_response = []
     filesToScan = []
     if not args.recursive and not args.fileName:
         parser.print_help()
@@ -82,6 +84,7 @@ if __name__ == '__main__':
 
 
     for fileName in filesToScan:
+        json_result = {'filename': None, 'debug': [], 'detections': [], 'signatures': [], 'threat index': 0}
         #[PL]: added constants for Sector IDs (from AAF specifications)
         MAXREGSECT = 0xFFFFFFFAL; # maximum SECT
         DIFSECT    = 0xFFFFFFFCL; # (-4) denotes a DIFAT sector in a FAT
@@ -93,20 +96,23 @@ if __name__ == '__main__':
         doubleLine = '='*60
         fileFormat = ''
         docType = ''
-        if not args.quiet:
+        if not args.quiet and not args.json:
             print doubleLine
-        print 'scanning document-file:', fileName
-        if not args.quiet:
+        if args.json:
+            json_result['filename'] = fileName
+        else:
+            print 'scanning document-file:', fileName
+        if not args.quiet and not args.json:
             print line
         sys.stdout.flush()
         try:
             Module_VBA = imp.load_source('Module_VBA', 'modules/VBA/Module_VBA.py')
-            if not args.quiet:
+            if not args.quiet and not args.json:
                 print "checking file format ...",
             sys.stdout.flush()
             if OleFileIO_PL.isOleFile(fileName):
                 fileFormat = '/OLE'
-                if not args.quiet:
+                if not args.quiet and not args.json:
                     print fileFormat
                     sys.stdout.flush()
                 ole = OleFileIO_PL.OleFileIO(fileName)
@@ -136,25 +142,28 @@ if __name__ == '__main__':
                 elif ole.exists('PowerPoint Document'):
                     docType = '/ppt'
                 else:
-                    print 'flie seems to be neither .docx, .xlsx nor .pptx'
+                    if args.json:
+                        json_result['debug'].append('file seems to be neither .docx, .xlsx nor .pptx')
+                    else:
+                        print 'file seems to be neither .docx, .xlsx nor .pptx'
                     #skip this file as it is probably an activeX.bin
                     continue
 
-                extractor = Module_VBA.VBA_Mod(fileName, 1, docType, args)
+                extractor = Module_VBA.VBA_Mod(fileName, 1, docType, args, json_result)
                 extractor.extractMacroCode()
                 Module_Flashobject = imp.load_source('Module_Flashobject', 'modules/flash/Module_Flashobject.py')
                 #import modules/flash/Module_Flashobject
-                flashMod = Module_Flashobject.Flash_Mod(fileName, 1, docType, args)
+                flashMod = Module_Flashobject.Flash_Mod(fileName, 1, docType, args, json_result)
                 flashMod.locateFlashObjects()
                 Module_Javascript = imp.load_source('Module_Javascript', 'modules/javascript/Module_Javascript.py')
                 #import modules/javascript/Module_Javascript
-                JSMod = Module_Javascript.JS_Mod(fileName, 1, docType, args)
+                JSMod = Module_Javascript.JS_Mod(fileName, 1, docType, args, json_result)
                 JSMod.locateJavascriptSource()
                 extractionFolder = None
             else:
                 #the document being scanned is in the new xml-based format
                 fileFormat = '/XML'
-                if not args.quiet:
+                if not args.quiet and not args.json:
                     print fileFormat
                     sys.stdout.flush()
 
@@ -165,20 +174,26 @@ if __name__ == '__main__':
                     folderName = fileName.split('.')[0]
 
                 if zipfile.is_zipfile(fileName):
-                    if not args.quiet:
+                    if not args.quiet and not args.json:
                         print "extracting file ...",
                         sys.stdout.flush()
                     try:
                         extractionFolder = omg_unzip(fileName, folderName)
                     except zipfile.BadZipfile:
-                        print
-                        print 'failed to extract XML-based document:', fileName
+                        if args.json:
+                            json_result['debug'].append('failed to extract XML-based document:', fileName)
+                        else:
+                            print
+                            print 'failed to extract XML-based document:', fileName
                         continue
-                    if not args.quiet:
+                    if not args.quiet and not args.json:
                         print "done"
                     sys.stdout.flush()
                 else:
-                    print "this is not a zip file"
+                    if args.json:
+                        json_result['debug'].append("this is not a zip file")
+                    else:
+                        print "this is not a zip file"
                     continue
 
                 if os.path.exists(os.path.join(folderName, "word")):
@@ -188,32 +203,35 @@ if __name__ == '__main__':
                 elif os.path.exists(os.path.join(folderName, "ppt")):
                     docType = '/ppt'
                 else:
-                    print 'could not determine filetype, skipping this file (%s)' % (folderName)
+                    if args.json:
+                        json_result['debug'].append('could not determine filetype, skipping this file (%s)' % (folderName))
+                    else:
+                        print 'could not determine filetype, skipping this file (%s)' % (folderName)
                     continue
 
                 #search for VBA-Macros
-                if not args.quiet:
+                if not args.quiet and not args.json:
                     print "searching for VBA ...",
                     sys.stdout.flush()
-                extractor = Module_VBA.VBA_Mod(folderName, 0, docType, args)
+                extractor = Module_VBA.VBA_Mod(folderName, 0, docType, args, json_result)
                 extractor.extractMacroCode()
 
                 #search for flash-objects
-                if not args.quiet:
+                if not args.quiet and not args.json:
                     print "searching for FLASH ...",
                     sys.stdout.flush()
                 Module_Flashobject = imp.load_source('Module_Flashobject', 'modules/flash/Module_Flashobject.py')
                 #import modules/flash/Module_Flashobject
-                flashMod = Module_Flashobject.Flash_Mod(folderName, 0, docType, args)
+                flashMod = Module_Flashobject.Flash_Mod(folderName, 0, docType, args, json_result)
                 flashMod.locateFlashObjects()
 
                 #search for javascript aka MS scriptlett-component
-                if not args.quiet:
+                if not args.quiet and not args.json:
                     print "searching for JavaScript ...",
                     sys.stdout.flush()
                 Module_Javascript = imp.load_source('Module_Javascript', 'modules/javascript/Module_Javascript.py')
                 #import modules/javascript/Module_Javascript
-                JSMod = Module_Javascript.JS_Mod(folderName, 0, docType, args)
+                JSMod = Module_Javascript.JS_Mod(folderName, 0, docType, args, json_result)
                 JSMod.locateJavascriptSource()
 
             #load and run cve-detection-plugins, which are suitable for the current document file
@@ -224,16 +242,16 @@ if __name__ == '__main__':
                 #fileName: path to the document being scanned
                 #doctype: defines wether the document is a word-, excel- or powerpoint-document
             #be sure too add this wrapper to your newly created plugins
-            if not args.quiet:
+            if not args.quiet and not args.json:
                 print "loading plugins ...",
                 sys.stdout.flush()
             pluginLoader = imp.load_source('pluginLoader', 'modules/CVE_detection/pluginLoader.py')
-            detectors = pluginLoader.pluginLoader(fileFormat, docType, fileName, extractionFolder)
-            if not args.quiet:
+            detectors = pluginLoader.pluginLoader(fileFormat, docType, fileName, extractionFolder, args, json_result)
+            if not args.quiet and not args.json:
                 print "done"
                 sys.stdout.flush()
             detectors.runDetectors()
-            if not args.quiet:
+            if not args.quiet and not args.json:
                 print line
             if extractionFolder:
                 try:
@@ -241,20 +259,32 @@ if __name__ == '__main__':
                     #shutil.rmtree(extractionFolder)
                 except StandardError as e:
                     print e
+            if args.json:
+                if len(json_result['signatures'])>0:
+                    json_result['threat index'] += 5
+                if len(json_result['detections'])>0:
+                    json_result['threat index'] += 2
+                json_response.append(json_result)
         except IOError as e:
             for arg in e.args:
                 if 'malformed OLE' in arg:
-                    print 'WARNING: document: ' + os.path.abspath(fileName) + ' seems to be damaged!'
-                    print 'this might be an indicator for embedded malware'
-
+                    if args.json:
+                        json_result['debug'].append('WARNING: document: ' + os.path.abspath(fileName) + ' seems to be damaged!')
+                        json_result['debug'].append('this might be an indicator for embedded malware')
+                    else:
+                        print 'WARNING: document: ' + os.path.abspath(fileName) + ' seems to be damaged!'
+                        print 'this might be an indicator for embedded malware'
                     break
                 else:
-                    print 'document: ' +  os.path.abspath(fileName) + ' caused ' + str(type(e))
-                    print e.args
+                    if args.json:
+                        json_result['debug'].append('document: ' +  os.path.abspath(fileName) + ' caused ' + str(type(e)))
+                        json_result['debug'].append(e.args)
+                    else:
+                        print 'document: ' +  os.path.abspath(fileName) + ' caused ' + str(type(e))
+                        print e.args
                     break
-            if not args.quiet:
+            if not args.quiet and not args.json:
                 print line
             continue
-
-
-
+    if args.json:
+        print json.dumps(json_response, sort_keys=False, indent=4, separators=(',', ': '))

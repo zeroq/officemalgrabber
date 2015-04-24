@@ -15,7 +15,7 @@ class JS_Mod:
     mode = 0
     MSscriptletClassID = 'AE24FDAE-03C6-11D1-8B76-0080C744F389'
 
-    def __init__(self, fileName, mode, docType, args):
+    def __init__(self, fileName, mode, docType, args, json_result):
         self.pathToActiveX = './' + fileName.split('.')[0] + docType + '/activeX'
         if mode == 0:
             #XML format case
@@ -24,6 +24,7 @@ class JS_Mod:
         self.mode = mode
         self.docType = docType
         self.args = args
+        self.json_result = json_result
 
     def locateJavascriptSource(self):
         foundScripttlet = False
@@ -38,7 +39,6 @@ class JS_Mod:
                     fileNames.append(os.path.join(dirname, filename))
 
             filtered = fnmatch.filter(fileNames, '*activeX*.xml')
-            #print filtered
 
             for activeXcontrol in filtered:
                 currentControl = open(activeXcontrol, 'r')
@@ -129,5 +129,8 @@ class JS_Mod:
                         OCXStream.close()
                         currentStorage.close()
 
-        if not foundScripttlet and not self.args.quiet:
+        if not foundScripttlet and not self.args.quiet and not self.args.json:
             print 'no Javascript/Scriptlett detected'
+        if foundScripttlet:
+            if self.args.json:
+                self.json_result['detections'].append({'type': 'javascript/scriptlett', 'location': None})

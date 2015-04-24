@@ -5,16 +5,17 @@ import os
 import fnmatch
 import string
 
-def getNewInstance(fileName, docType, extractionFolder):
-    return CVE_2014_4114_detector(fileName, docType, extractionFolder)
+def getNewInstance(fileName, docType, extractionFolder, args, json_result):
+    return CVE_2014_4114_detector(fileName, docType, extractionFolder, args, json_result)
 
 
 class CVE_2014_4114_detector:
 
-    def __init__(self, fileName, docType, extractionFolder):
+    def __init__(self, fileName, docType, extractionFolder, args, json_result):
         self.extractionFolder = extractionFolder
         self.fileName = fileName
         self.docType = docType
+        self.json_result = json_result
 
     def check(self):
         check_path = os.path.join(self.extractionFolder, 'ppt', 'embeddings')
@@ -34,4 +35,7 @@ class CVE_2014_4114_detector:
                             result = ""
         for item in results:
             if item.endswith('.inf') or item.endswith('.INF'):
-                print ">> possible CVE-2014-4114 exploit attempt found: %s" % (item)
+                if self.args.json:
+                    self.json_result['signatures'].append({'match': 'cve-2014-4114'})
+                else:
+                    print ">> possible CVE-2014-4114 exploit attempt found: %s" % (item)

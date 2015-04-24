@@ -15,12 +15,13 @@ class VBA_Mod:
     fileName = ''
     mode = 0
     docType = ''
-    def __init__(self, fileName, mode, docType, args):
+    def __init__(self, fileName, mode, docType, args, json_result):
         self.fileName = fileName
         self.mode = mode
         self.docType = docType
         self.extractionFolder = args.extractionFolder
         self.args = args
+        self.json_result = json_result
 
     def getCompressedChunkLength(self, blob):
         chunkLength = littleEndian.readShort(blob, 0)
@@ -35,7 +36,7 @@ class VBA_Mod:
         prefix = ''
         if self.mode == 0:
             if not os.path.exists(fileName + self.docType + '/vbaProject.bin'):
-                if not self.args.quiet:
+                if not self.args.quiet and not self.args.json:
                     print 'found no macro-code'
                 return
             assert OleFileIO_PL.isOleFile(fileName + self.docType + '/vbaProject.bin')
@@ -55,7 +56,7 @@ class VBA_Mod:
                 prefix = 'Macros/VBA/'
             elif self.docType == '/ppt':
                 prefix = 'VBA/'
-                if not self.args.quiet:
+                if not self.args.quiet and not self.args.json:
                     print 'extracting VBA-Storage...'
                 current_user_stream = ole.openstream('Current User').read()
                 document_stream = ole.openstream('PowerPoint Document').read()
@@ -138,12 +139,12 @@ class VBA_Mod:
                 path = prefix + moduleName
 
                 if ole.exists(path):
-                    if not self.args.quiet:
+                    if not self.args.quiet and not self.args.json:
                         print 'decoding module:', moduleName
                     oleStream = ole.openstream(path)
                     codeBuffer = oleStream.read()
                 else:
-                    if not self.args.quiet:
+                    if not self.args.quiet and not self.args.json:
                         print path, 'does\'t exist'
 
                 try:
@@ -192,8 +193,12 @@ class VBA_Mod:
                 decodedMacroCode.write('\r\n\r\n\r\n\r\n')
 
             decodedMacroCode.close()
+            macro_save_location = os.path.abspath(folderName + '/macroCode.txt')
             if not self.args.quiet:
-                print 'saved macrocode to file:', os.path.abspath(folderName + '/macroCode.txt')
+                if self.args.json:
+                    self.json_result['debug'].append('saved macrocode to file: %s' % (macro_save_location))
+                else:
+                    print 'saved macrocode to file: %s' % (macro_save_location)
             foundMacroCode = True
 
             '''blackList = ["kernel32" , "CreateThread", "VirtualAlloc", "RtlMoveMemory"]
@@ -212,7 +217,10 @@ class VBA_Mod:
 
             ole.close()
 
-        if not foundMacroCode and not self.args.quiet:
+        if not foundMacroCode and not self.args.quiet and not self.args.json:
             print 'found no macro-code'
         elif foundMacroCode:
-            print '>> macro code detected!'
+            if self.args.json:
+                self.json_result['detections'].append({'type': 'macro code', 'location': macro_save_location})
+            else:
+                print '>> macro code detected!'

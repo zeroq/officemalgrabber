@@ -18,7 +18,7 @@ class Flash_Mod:
     mode = 0
     ShockwaveFlashClassID = 'D27CDB6E-AE6D-11CF-96B8-444553540000'
 
-    def __init__(self, fileName, mode, docType, args):
+    def __init__(self, fileName, mode, docType, args, json_result):
         self.pathToActiveX = './' + fileName.split('.')[0] + docType + '/activeX'
         if mode == 0:
             #XML format case
@@ -27,6 +27,7 @@ class Flash_Mod:
         self.mode = mode
         self.docType = docType
         self.args = args
+        self.json_result = json_result
 
     def locateFlashObjects(self):
         pathToActiveX = self.pathToActiveX
@@ -52,7 +53,7 @@ class Flash_Mod:
 
                 #the Class-ID: D27CDB6E-AE6D-11CF-96B8-444553540000 identifies an activeX-control as flash-object
                 if self.ShockwaveFlashClassID in controlText:
-                    if not self.args.quiet:
+                    if not self.args.quiet and not self.args.json:
                         print activeXcontrol + " is a FlashObject!"
                     foundFlashObject = True
                     activeXBinFileName = activeXcontrol[:-3]
@@ -81,8 +82,13 @@ class Flash_Mod:
                         #of it, (interpreting the 4 bytes as a unsigned integer in littleendian)
                         if bytesForPath == pathLength*2 and not self.args.quiet:
                             print 'path to .swf: ' + path
-                if not foundFlashObject and not self.args.quiet:
+                if not foundFlashObject and not self.args.quiet and not self.args.json:
                     print 'found no Flash-Objects'
+                if foundFlashObject:
+                    if self.args.json:
+                        self.json_result['detections'].append({'type': 'flash', 'location': None})
+                    else:
+                        print "found flash object"
                 return
             for activeXBinFileName in activeXContainers:
                 #make sure that our .bin files are actually OLE-files
@@ -96,7 +102,7 @@ class Flash_Mod:
                     content = Contents.read()
                     Contents.close()
                 else:
-                    if not self.args.quiet:
+                    if not self.args.quiet and not self.args.json:
                         print('Contents doesn\'t exsit')
                     ole.close()
 
@@ -112,15 +118,20 @@ class Flash_Mod:
                             pathToSWFfile += content[iterator]
                     #print as a hex string, if you need to search manually in the .bin file
                     #print (':'.join(x.encode('hex') for x in pathToSWFfile))
-                    if not self.args.quiet:
+                    if not self.args.quiet and not self.args.json:
                         print 'path to swf-file: ' + pathToSWFfile
                 else:
-                    if not self.args.quiet:
+                    if not self.args.quiet and not self.args.json:
                         print 'this doesn\'t seem to be an unicode string'
 
                 ole.close()
-            if not foundFlashObject and not self.args.quiet:
+            if not foundFlashObject and not self.args.quiet and not self.args.json:
                 print 'found no Flash-Objects'
+            if foundFlashObject:
+                if self.args.json:
+                    self.json_result['detections'].append({'type': 'flash', 'location': None})
+                else:
+                    print "found flash object"
         else:
             #this is a OLE-formated document
             assert OleFileIO_PL.isOleFile(fileName)
@@ -130,11 +141,11 @@ class Flash_Mod:
                 wordDocStream = ole.openstream('WordDocument')
                 wordDocBuffer = wordDocStream.read()
                 if 'CONTROL ShockwaveFlash.ShockwaveFlash' in wordDocBuffer:
-                    if not self.args.quiet:
+                    if not self.args.quiet and not self.args.json:
                         print 'use of Shockwafe Flash detected'
                     foundFlashObject = True
                 else:
-                    if not foundFlashObject and not self.args.quiet:
+                    if not foundFlashObject and not self.args.quiet and not self.args.json:
                         print 'found no Flash-Objects'
                     return
                 listOCXContents = []
@@ -166,10 +177,10 @@ class Flash_Mod:
                         if bytesForPath == pathLength*2:
                             #print 'length does match!'
                             pass
-                        if not self.args.quiet:
+                        if not self.args.quiet and not self.args.json:
                             print 'path to .swf: ' + path
                     else:
-                        if not self.args.quiet:
+                        if not self.args.quiet and not self.args.json:
                             print 'no .swf found in contents'
                     OCXStream.close()
 
@@ -215,17 +226,22 @@ class Flash_Mod:
                             path = contentBuffer[currentOffset-2] + path
                             currentOffset = currentOffset -2
                             pathLength = pathLength+1
-                        if not self.args.quiet:
+                        if not self.args.quiet and not self.args.json:
                             print 'path to .swf: ' + path
                     else:
-                        if not self.args.quiet:
+                        if not self.args.quiet and not self.args.json:
                             print 'no .swf found in contents'
                     currentStorage.close()
                     currentPersistId += 1
             else:
-                if not self.args.quiet:
+                if not self.args.quiet and not self.args.json:
                     print 'No document type was given'
 
-            if not foundFlashObject and not self.args.quiet:
+            if not foundFlashObject and not self.args.quiet and not self.args.json:
                     print 'found no Flash-Objects'
+            if foundFlashObject:
+                if self.args.json:
+                    self.json_result['detections'].append({'type': 'flash', 'location': None})
+                else:
+                    print "found flash object"
             ole.close()

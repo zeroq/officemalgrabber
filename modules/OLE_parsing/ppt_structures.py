@@ -211,7 +211,7 @@ def findShockwaveFlash(pptDocumentContainer):
                             if atom.head.recVer == 0x0 and atom.head.recType == 0x0FBA:
                                 if 'Shockwave' in atom.getContent():
                                     if not foundFlashObject:
-                                        print 'detected use of Shockwave-Flash'
+                                        #print 'detected use of Shockwave-Flash'
                                         foundFlashObject = True
                                     for externalOleObjectAtom in exControl.children:
                                         if externalOleObjectAtom.head.recType == 0x0FC3:
@@ -221,7 +221,8 @@ def findShockwaveFlash(pptDocumentContainer):
                                                 listOfPersistIdRefs += [positionInPersistDirectory]
 
     else:
-        print 'this doesn\'t seem to be a pptDocumentContainer'
+        #print 'this doesn\'t seem to be a pptDocumentContainer'
+        pass
     return foundFlashObject
 
 def findScriptlets(pptDocumentContainer):
@@ -237,7 +238,7 @@ def findScriptlets(pptDocumentContainer):
                             if atom.head.recVer == 0x0 and atom.head.recType == 0x0FBA:
                                 if 'Scriptlet' in atom.getContent() or 'ScriptBridge' in atom.getContent():
                                     if not foundScriptlet:
-                                        print 'detected use of MS Scriptlet-Component'
+                                        #print 'detected use of MS Scriptlet-Component'
                                         foundScriptlet = True
                                     #return foundScriptlet
                                     for externalOleObjectAtom in exControl.children:
@@ -248,6 +249,7 @@ def findScriptlets(pptDocumentContainer):
                                                 listOfPersistIdRefs += [positionInPersistDirectory]
 
     else:
-        print 'this doesn\'t seem to be a pptDocumentContainer'
+        #print 'this doesn\'t seem to be a pptDocumentContainer'
+        pass
     return foundScriptlet
 
