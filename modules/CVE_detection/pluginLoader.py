@@ -12,14 +12,10 @@ class pluginLoader:
 
         self.pluginFiles = os.listdir(pathToPluginFiles)
 
-
         for plugin in self.pluginFiles:
-            if plugin.split('.')[-1] != 'py':
-                self.pluginFiles.remove(plugin)
-
-        for plugin in self.pluginFiles:
-            imported = imp.load_source(plugin.split('.')[0], pathToPluginFiles + '/' + plugin)
-            self.loadedPlugins += [imported.getNewInstance(fileName, docType, extractionFolder)]
+            if plugin.endswith('.py'):
+                imported = imp.load_source(plugin.split('.')[0], pathToPluginFiles + '/' + plugin)
+                self.loadedPlugins += [imported.getNewInstance(fileName, docType, extractionFolder)]
 
     def runDetectors(self):
         for plugin in self.loadedPlugins:
