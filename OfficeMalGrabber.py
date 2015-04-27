@@ -168,10 +168,10 @@ if __name__ == '__main__':
                     sys.stdout.flush()
 
                 """ determine folder where to extract XML parts """
-                folderName = fileName.split('.')[0].split('/')[-1]
+                folderName = fileName.rsplit('.', 1)[0].rsplit('/', 1)[-1]
                 folderName = args.extractionFolder + '/' + folderName
                 if args.extractionFolder == '.':
-                    folderName = fileName.split('.')[0]
+                    folderName = fileName.rsplit('.', 1)[0]
 
                 if zipfile.is_zipfile(fileName):
                     if not args.quiet and not args.json:

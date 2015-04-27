@@ -148,6 +148,11 @@ def findExternalOleObjectStorageLocation(current_user_stream, ppt_document_strea
         print 'failed to parse currentUserAtom, file might be corrupted!'
         return None
 
+    if len(ppt_document_stream[currentUserAtom.offsetToCurrentEdit:])<=0:
+        print 'end of stream?'
+        return None
+
+    print [ppt_document_stream[currentUserAtom.offsetToCurrentEdit:]]
 
     userEditAtom = ppt_atom(ppt_document_stream[currentUserAtom.offsetToCurrentEdit:])
     userEditAtom.lastSlieIdRef = userEditAtom.binaryData[0:4]
@@ -157,6 +162,9 @@ def findExternalOleObjectStorageLocation(current_user_stream, ppt_document_strea
     userEditAtom.offsetLastEdit = littleEndian.readInt(userEditAtom.binaryData, 8)
     userEditAtom.offestPersistDirectory = littleEndian.readInt(userEditAtom.binaryData, 12)
 
+    if len(ppt_document_stream[userEditAtom.offestPersistDirectory:])<=0:
+        print 'end of stream'
+        return None
 
     persistDirectoryAtom = ppt_atom(ppt_document_stream[userEditAtom.offestPersistDirectory:])
     persistId16bits = littleEndian.readShort(persistDirectoryAtom.binaryData, 0)

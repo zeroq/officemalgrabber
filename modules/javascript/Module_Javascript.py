@@ -72,7 +72,7 @@ class JS_Mod:
                 wordDocStream = ole.openstream('WordDocument')
                 wordDocBuffer = wordDocStream.read()
                 if 'CONTROL ScriptBridge.ScriptBridge' in wordDocBuffer:
-                    if not self.args.quiet:
+                    if not self.args.quiet and not self.args.json:
                         print 'use of MS Scriptlet detected'
 
                     listOCXContents = []
@@ -90,7 +90,7 @@ class JS_Mod:
                             pathLength = littleEndian.readInt(contentBuffer, 18)
                             for character in range(22, 22+(pathLength*2), 2):
                                 pathToSourceFile = pathToSourceFile + contentBuffer[character]
-                            if not self.args.quiet:
+                            if not self.args.quiet and not self.args.json:
                                 print 'path to source file: ', pathToSourceFile
                             if self.args.json:
                                 self.locations.append(pathToSourceFile)
@@ -127,7 +127,7 @@ class JS_Mod:
                             pathLength = littleEndian.readInt(contentBuffer, 18)
                             for character in range(22, 22+(pathLength*2), 2):
                                 pathToSourceFile = pathToSourceFile + contentBuffer[character]
-                            if not self.args.quiet:
+                            if not self.args.quiet and not self.args.json:
                                 print 'path to source file: ', pathToSourceFile
                             if self.args.json:
                                 self.locations.append(pathToSourceFile)
