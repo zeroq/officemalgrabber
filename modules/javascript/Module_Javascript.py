@@ -25,6 +25,7 @@ class JS_Mod:
         self.docType = docType
         self.args = args
         self.json_result = json_result
+        self.locations = []
 
     def locateJavascriptSource(self):
         foundScripttlet = False
@@ -91,6 +92,8 @@ class JS_Mod:
                                 pathToSourceFile = pathToSourceFile + contentBuffer[character]
                             if not self.args.quiet:
                                 print 'path to source file: ', pathToSourceFile
+                            if self.args.json:
+                                self.locations.append(pathToSourceFile)
                         OCXStream.close()
 
             elif self.docType == '/xl':
@@ -126,6 +129,8 @@ class JS_Mod:
                                 pathToSourceFile = pathToSourceFile + contentBuffer[character]
                             if not self.args.quiet:
                                 print 'path to source file: ', pathToSourceFile
+                            if self.args.json:
+                                self.locations.append(pathToSourceFile)
                         OCXStream.close()
                         currentStorage.close()
 
@@ -133,4 +138,4 @@ class JS_Mod:
             print 'no Javascript/Scriptlett detected'
         if foundScripttlet:
             if self.args.json:
-                self.json_result['detections'].append({'type': 'javascript/scriptlett', 'location': None})
+                self.json_result['detections'].append({'type': 'javascript/scriptlett', 'location': self.locations})
