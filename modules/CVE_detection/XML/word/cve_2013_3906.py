@@ -3,6 +3,7 @@
 
 import os
 import fnmatch
+import re
 
 def getNewInstance(fileName, docType, extractionFolder, args, json_result):
     return CVE_2013_3906_detector(fileName, docType, extractionFolder, args, json_result)
@@ -20,6 +21,7 @@ class CVE_2013_3906_detector:
         self.docType = docType
         self.args = args
         self.json_result = json_result
+        self.urlRE = re.compile('((https?|ftp):((\/\/)|(\\\\))+[\d\w:@\/()~_?\+\-=\\\.&]*)')
 
     def check(self):
         activeXContainers = []
@@ -58,6 +60,12 @@ class CVE_2013_3906_detector:
                     found = True
             if not found:
                 fileSizesAndOccurences.append((statinfo.st_size, 1))
+            fp = open(activeXFile, 'r')
+            content = fp.read()
+            fp.close()
+            match = self.urlRE.search(content)
+            if match:
+                self.json_result['detections'].append({'type': 'URL', 'location': match.group()})
 
         sameSize = 0
         for items in fileSizesAndOccurences:

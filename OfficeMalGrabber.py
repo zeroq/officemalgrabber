@@ -84,7 +84,14 @@ if __name__ == '__main__':
 
 
     for fileName in filesToScan:
-        json_result = {'filename': None, 'debug': [], 'detections': [], 'signatures': [], 'threat index': 0}
+        json_result = {'filename': fileName, 'debug': [], 'detections': [], 'signatures': [], 'threat index': 0}
+        if not os.path.exists(fileName):
+            if args.json:
+                json_result['debug'].append("no such file: %s" % (fileName))
+                json_response.append(json_result)
+            else:
+                print "no such file: %s" % (fileName)
+            continue
         #[PL]: added constants for Sector IDs (from AAF specifications)
         MAXREGSECT = 0xFFFFFFFAL; # maximum SECT
         DIFSECT    = 0xFFFFFFFCL; # (-4) denotes a DIFAT sector in a FAT
@@ -144,6 +151,7 @@ if __name__ == '__main__':
                 else:
                     if args.json:
                         json_result['debug'].append('file seems to be neither .docx, .xlsx nor .pptx')
+                        json_response.append(json_result)
                     else:
                         print 'file seems to be neither .docx, .xlsx nor .pptx'
                     #skip this file as it is probably an activeX.bin
@@ -182,6 +190,7 @@ if __name__ == '__main__':
                     except zipfile.BadZipfile:
                         if args.json:
                             json_result['debug'].append('failed to extract XML-based document:', fileName)
+                            json_response.append(json_result)
                         else:
                             print
                             print 'failed to extract XML-based document:', fileName
@@ -192,6 +201,7 @@ if __name__ == '__main__':
                 else:
                     if args.json:
                         json_result['debug'].append("this is not a zip file")
+                        json_response.append(json_result)
                     else:
                         print "this is not a zip file"
                     continue
@@ -205,6 +215,7 @@ if __name__ == '__main__':
                 else:
                     if args.json:
                         json_result['debug'].append('could not determine filetype, skipping this file (%s)' % (folderName))
+                        json_response.append(json_result)
                     else:
                         print 'could not determine filetype, skipping this file (%s)' % (folderName)
                     continue
@@ -285,6 +296,8 @@ if __name__ == '__main__':
                     break
             if not args.quiet and not args.json:
                 print line
+            if args.json:
+                json_response.append(json_result)
             continue
     if args.json:
         print json.dumps(json_response, sort_keys=False, indent=4, separators=(',', ': '))
