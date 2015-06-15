@@ -9,8 +9,10 @@ class pluginLoader:
         pathToPluginFiles = './modules/CVE_detection' + fileFormat + docType
         self.pluginFiles = []
         self.loadedPlugins = []
-
-        self.pluginFiles = os.listdir(pathToPluginFiles)
+        try:
+            self.pluginFiles = os.listdir(pathToPluginFiles)
+        except:
+            self.pluginFiles = []
 
         for plugin in self.pluginFiles:
             if plugin.endswith('.py'):
