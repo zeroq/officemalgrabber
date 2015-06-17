@@ -52,6 +52,9 @@ def getFat(binaryContent, sectorsize):
 
 
 if __name__ == '__main__':
+    workdir = sys.path[0]
+    os.chdir(workdir)
+
     helpText = '''
     --fileName {name of file to scan for malware}
     -f         {name of file to scan for malware}

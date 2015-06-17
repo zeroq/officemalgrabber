@@ -152,7 +152,7 @@ def findExternalOleObjectStorageLocation(current_user_stream, ppt_document_strea
         #print 'end of stream?'
         return None
 
-    print [ppt_document_stream[currentUserAtom.offsetToCurrentEdit:]]
+    #print [ppt_document_stream[currentUserAtom.offsetToCurrentEdit:]]
 
     userEditAtom = ppt_atom(ppt_document_stream[currentUserAtom.offsetToCurrentEdit:])
     userEditAtom.lastSlieIdRef = userEditAtom.binaryData[0:4]
