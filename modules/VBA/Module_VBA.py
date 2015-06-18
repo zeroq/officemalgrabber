@@ -127,7 +127,7 @@ class VBA_Mod:
         if self.mode == 0:
             if not os.path.exists(fileName + self.docType + '/vbaProject.bin'):
                 if not self.args.quiet and not self.args.json:
-                    print 'found no macro-code'
+                    print 'no macro-code'
                 return
             assert OleFileIO_PL.isOleFile(fileName + self.docType + '/vbaProject.bin')
 
@@ -308,7 +308,7 @@ class VBA_Mod:
             ole.close()
 
         if not foundMacroCode and not self.args.quiet and not self.args.json:
-            print 'found no macro-code'
+            print 'no macro-code'
         elif foundMacroCode:
             if self.args.json:
                 self.json_result['detections'].append({'type': 'macro code', 'location': macro_save_location})

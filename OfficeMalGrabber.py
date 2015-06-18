@@ -159,17 +159,38 @@ if __name__ == '__main__':
                         print 'file seems to be neither .docx, .xlsx nor .pptx'
                     #skip this file as it is probably an activeX.bin
                     continue
-
-                extractor = Module_VBA.VBA_Mod(fileName, 1, docType, args, json_result)
-                extractor.extractMacroCode()
-                Module_Flashobject = imp.load_source('Module_Flashobject', 'modules/flash/Module_Flashobject.py')
-                #import modules/flash/Module_Flashobject
-                flashMod = Module_Flashobject.Flash_Mod(fileName, 1, docType, args, json_result)
-                flashMod.locateFlashObjects()
-                Module_Javascript = imp.load_source('Module_Javascript', 'modules/javascript/Module_Javascript.py')
-                #import modules/javascript/Module_Javascript
-                JSMod = Module_Javascript.JS_Mod(fileName, 1, docType, args, json_result)
-                JSMod.locateJavascriptSource()
+                try:
+                    if not args.json:
+                        print ".: checking for macro code ...",
+                    extractor = Module_VBA.VBA_Mod(fileName, 1, docType, args, json_result)
+                    extractor.extractMacroCode()
+                except Exception as e:
+                    if args.json:
+                        json_result['debug'].append('%s' % (e))
+                    else:
+                        print e
+                try:
+                    if not args.json:
+                        print ".: checking for flash objects ...",
+                    Module_Flashobject = imp.load_source('Module_Flashobject', 'modules/flash/Module_Flashobject.py')
+                    flashMod = Module_Flashobject.Flash_Mod(fileName, 1, docType, args, json_result)
+                    flashMod.locateFlashObjects()
+                except Exception as e:
+                    if args.json:
+                        json_result['debug'].append('%s' % (e))
+                    else:
+                        print e
+                try:
+                    if not args.json:
+                        print ".: checking for javascript code ...",
+                    Module_Javascript = imp.load_source('Module_Javascript', 'modules/javascript/Module_Javascript.py')
+                    JSMod = Module_Javascript.JS_Mod(fileName, 1, docType, args, json_result)
+                    JSMod.locateJavascriptSource()
+                except Exception as e:
+                    if args.json:
+                        json_result['debug'].append('%s' % (e))
+                    else:
+                        print e
                 extractionFolder = None
             else:
                 #the document being scanned is in the new xml-based format
@@ -257,7 +278,7 @@ if __name__ == '__main__':
                 #doctype: defines wether the document is a word-, excel- or powerpoint-document
             #be sure too add this wrapper to your newly created plugins
             if not args.quiet and not args.json:
-                print "loading plugins ...",
+                print ".: loading plugins ...",
                 sys.stdout.flush()
             pluginLoader = imp.load_source('pluginLoader', 'modules/CVE_detection/pluginLoader.py')
             detectors = pluginLoader.pluginLoader(fileFormat, docType, fileName, extractionFolder, args, json_result)

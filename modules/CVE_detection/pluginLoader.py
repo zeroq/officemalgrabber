@@ -6,6 +6,7 @@ import imp
 
 class pluginLoader:
     def __init__(self, fileFormat, docType, fileName, extractionFolder, args, json_result):
+        self.args = args
         pathToPluginFiles = './modules/CVE_detection' + fileFormat + docType
         self.pluginFiles = []
         self.loadedPlugins = []
@@ -21,4 +22,9 @@ class pluginLoader:
 
     def runDetectors(self):
         for plugin in self.loadedPlugins:
+            if not self.args.json:
+                try:
+                    plugin.report()
+                except:
+                    pass
             plugin.check()
