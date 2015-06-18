@@ -4,6 +4,8 @@
 import array
 import imp
 import os
+import re
+from itertools import groupby
 
 import core.littleEndian as littleEndian
 import core.OleFileIO_PL as OleFileIO_PL
@@ -28,6 +30,94 @@ class VBA_Mod:
         chunkLength = chunkLength & 0x0fff
         return chunkLength + 3
 
+    def checkMacroCode(self, path):
+        try:
+            fp = open(path, 'r')
+            content = fp.read()
+            fp.close()
+        except Exception as e:
+            if self.args.json:
+                pass
+            else:
+                print e
+        # Check for auto_open string in macro
+        re_may_obfuscate = re.compile('Chr\(.+?\)', re.I|re.S)
+        re_auto_open = re.compile('Sub AutoOpen\(\)', re.I|re.S)
+        re_workbook_open = re.compile('Sub Workbook_Open\(\)', re.I|re.S)
+        re_may_write_to_file = re.compile('Open .+? For Output As ', re.I|re.S)
+        re_may_write_to_file_2 = re.compile('Print #', re.I|re.S)
+        re_may_get_files_internet = re.compile('Open "GET"', re.I|re.S)
+        re_may_execute_file = re.compile('Shell\(.+?\)', re.I|re.S)
+        re_may_read_environment = re.compile('Environ\(.+?\)', re.I|re.S)
+        re_may_create_object = re.compile('CreateObject\(.+?\)', re.I|re.S)
+        re_may_domain = re.compile('([a-z0-9]{1,30}(?:\.[a-z0-9]{1,30})*?\.(?:[a-z]{2,3}/))|([a-z0-9]{1,30}(?:\.[a-z0-9]{1,30})*?\.(?:com|org|net|mil|edu|de|ir))', re.I|re.S)
+        # Eval regexes
+        match = re_may_obfuscate.search(content)
+        if match:
+            if self.args.json:
+                self.json_result['signatures'].append({'match': 'Found suspicious keyword "Chr" which indicates: "May attempt to obfuscate specific strings"'})
+            else:
+                print '>>>> Found suspicious keyword "Chr" which indicates: "May attempt to obfuscate specific strings"'
+        match = re_auto_open.search(content)
+        if match:
+            if self.args.json:
+                self.json_result['signatures'].append({'match': 'Found keyword "AutoOpen" which indicates: "Runs when the Word document is opened"'})
+            else:
+                print '>>>> Found keyword "AutoOpen" which indicates: "Runs when the Word document is opened"'
+        match = re_workbook_open.search(content)
+        if match:
+            if self.args.json:
+                self.json_result['signatures'].append({'match': 'Found keyword "Workbook_Open" which indicates: "Runs when the Excel Workbook is opened"'})
+            else:
+                print '>>>> Found keyword "Workbook_Open" which indicates: "Runs when the Excel Workbook is opened"'
+        match = re_may_write_to_file.search(content)
+        if match:
+            if self.args.json:
+                self.json_result['signatures'].append({'match': 'Found suspicious keywords "Open ... For Output" which indicates: "May write to a file"'})
+            else:
+                print '>>>> Found suspicious keywords "Open ... For Output" which indicates: "May write to a file"'
+        match = re_may_write_to_file_2.search(content)
+        if match:
+            if self.args.json:
+                self.json_result['signatures'].append({'match': 'Found suspicious keyword "Print #" which indicates: "May write to a file (if combined with Open)"'})
+            else:
+                print '>>>> Found suspicious keyword "Print #" which indicates: "May write to a file (if combined with Open)"'
+        match = re_may_get_files_internet.search(content)
+        if match:
+            if self.args.json:
+                self.json_result['signatures'].append({'match': 'Found suspicious keyword "GET" which indicates: "May retrieve files from the internet""'})
+            else:
+                print '>>>> Found suspicious keyword "GET" which indicates: "May retrieve files from the internet"'
+        match = re_may_execute_file.search(content)
+        if match:
+            if self.args.json:
+                self.json_result['signatures'].append({'match': 'Found suspicious keyword "Shell" which indicates: "May run an executable file or a system command"'})
+            else:
+                print '>>>> Found suspicious keyword "Shell" which indicates: "May run an executable file or a system command"'
+        match = re_may_read_environment.search(content)
+        if match:
+            if self.args.json:
+                self.json_result['signatures'].append({'match': 'Found suspicious keyword "Environ" which indicates: "May read system environment variables"'})
+            else:
+                print '>>>> Found suspicious keyword "Environ" which indicates: "May read system environment variables"'
+        match = re_may_create_object.search(content)
+        if match:
+            if self.args.json:
+                self.json_result['signatures'].append({'match': 'Found suspicious keyword "CreateObject" which indicates: "May create an OLE object"'})
+            else:
+                print '>>>> Found suspicious keyword "CreateObject" which indicates: "May create an OLE object"'
+        match = re_may_domain.findall(content)
+        if match:
+            urlpatterns = []
+            for item in match:
+                if item[0] != '' and item[0] not in urlpatterns:
+                    urlpatterns.append(item[0])
+                if item[1] != '' and item[1] not in urlpatterns:
+                    urlpatterns.append(item[1])
+            if self.args.json:
+                self.json_result['signatures'].append({'match': 'Found URL like patterns in decoded VBA strings: %s' % (urlpatterns)})
+            else:
+                print '>>>> Found URL like patterns in decoded VBA strings: %s' % (urlpatterns)
 
     def extractMacroCode(self):
         foundMacroCode = False
@@ -224,3 +314,4 @@ class VBA_Mod:
                 self.json_result['detections'].append({'type': 'macro code', 'location': macro_save_location})
             else:
                 print '>> macro code detected!'
+            self.checkMacroCode(macro_save_location)
