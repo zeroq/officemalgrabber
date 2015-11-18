@@ -234,8 +234,9 @@ class VBA_Mod:
                     oleStream = ole.openstream(path)
                     codeBuffer = oleStream.read()
                 else:
+                    oleStream = None
                     if not self.args.quiet and not self.args.json:
-                        print path, 'does\'t exist'
+                        print path, 'doesn\'t exist'
 
                 try:
                     codeBuffer = codeBuffer[listCodeOffsets[current]+1:]
@@ -252,7 +253,8 @@ class VBA_Mod:
                     listEncodedMacroCode.append(currentChunk)
 
                     current += 1
-                oleStream.close()
+                if oleStream:
+                    oleStream.close()
 
             if not self.extractionFolder:
                 folderName1 = self.fileName.rsplit('.', 1)[0]
