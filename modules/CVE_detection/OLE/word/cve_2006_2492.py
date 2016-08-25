@@ -19,7 +19,7 @@ class CVE_2006_2492_detector:
         self.fileName = fileName
 
     def report(self):
-        print "....: CVE-2006-2492"
+        print "....: checking CVE-2006-2492"
 
     def check(self):
         try:

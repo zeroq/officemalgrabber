@@ -43,6 +43,7 @@ class VBA_Mod:
         # Check for auto_open string in macro
         re_may_obfuscate = re.compile('Chr\(.+?\)', re.I|re.S)
         re_auto_open = re.compile('Sub AutoOpen\(\)', re.I|re.S)
+        re_download_file = re.compile('URLDownloadToFileA', re.I|re.S)
         re_workbook_open = re.compile('Sub Workbook_Open\(\)', re.I|re.S)
         re_may_write_to_file = re.compile('Open .+? For Output As ', re.I|re.S)
         re_may_write_to_file_2 = re.compile('Print #', re.I|re.S)
@@ -52,6 +53,12 @@ class VBA_Mod:
         re_may_create_object = re.compile('CreateObject\(.+?\)', re.I|re.S)
         re_may_domain = re.compile('([a-z0-9]{1,30}(?:\.[a-z0-9]{1,30})*?\.(?:[a-z]{2,3}/))|([a-z0-9]{1,30}(?:\.[a-z0-9]{1,30})*?\.(?:com|org|net|mil|edu|de|ir))', re.I|re.S)
         # Eval regexes
+        match = re_download_file.search(content)
+        if match:
+            if self.args.json:
+                self.json_result['signatures'].append({'match': 'Found suspicious keyword "URLDownloadToFileA" which indicates: "May attempt to download a file from the Internet"'})
+            else:
+                print '>>>> Found suspicious keyword "URLDownloadToFileA" which indicates: "May attempt to download a file from the Internet"'
         match = re_may_obfuscate.search(content)
         if match:
             if self.args.json:

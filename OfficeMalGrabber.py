@@ -85,7 +85,6 @@ if __name__ == '__main__':
     else:
         filesToScan = [args.fileName]
 
-
     for fileName in filesToScan:
         json_result = {'filename': fileName, 'debug': [], 'detections': [], 'signatures': [], 'threat index': 0}
         if not os.path.exists(fileName):
@@ -302,6 +301,8 @@ if __name__ == '__main__':
                 json_response.append(json_result)
         except IOError as e:
             for arg in e.args:
+                if not isinstance(arg, str):
+                    continue
                 if 'malformed OLE' in arg:
                     if args.json:
                         json_result['debug'].append('WARNING: document: ' + os.path.abspath(fileName) + ' seems to be damaged!')
