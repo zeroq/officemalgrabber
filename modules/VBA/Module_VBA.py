@@ -51,6 +51,7 @@ class VBA_Mod:
         re_may_execute_file = re.compile('Shell\(.+?\)', re.I|re.S)
         re_may_read_environment = re.compile('Environ\(.+?\)', re.I|re.S)
         re_may_create_object = re.compile('CreateObject\(.+?\)', re.I|re.S)
+        re_run_on_close = re.compile('Document_Close\(.+?\)', re.I|re.S)
         re_may_domain = re.compile('([a-z0-9]{1,30}(?:\.[a-z0-9]{1,30})*?\.(?:[a-z]{2,3}/))|([a-z0-9]{1,30}(?:\.[a-z0-9]{1,30})*?\.(?:com|org|net|mil|edu|de|ir))', re.I|re.S)
         # Eval regexes
         match = re_download_file.search(content)
@@ -113,6 +114,12 @@ class VBA_Mod:
                 self.json_result['signatures'].append({'match': 'Found suspicious keyword "CreateObject" which indicates: "May create an OLE object"'})
             else:
                 print '>>>> Found suspicious keyword "CreateObject" which indicates: "May create an OLE object"'
+        match = re_run_on_close.search(content)
+        if match:
+            if self.args.json:
+                self.json_result['signatures'].append({'match': 'Found suspicious keyword "Document_Close" which indicates: "Runs when the Word document is closed"'})
+            else:
+                print '>>>> Found suspicious keyword "Document_Close" which indicates: "Runs when the Word document is closed"'
         match = re_may_domain.findall(content)
         if match:
             urlpatterns = []
