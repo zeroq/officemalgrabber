@@ -16,12 +16,12 @@ class rcHeader:
         temp = littleEndian.readShort(binaryString, 0)
         self.recVer = temp & 0x000f
         self.recInstance = temp >> 4
-        self.recType = (ord(binaryString[3]) << 8) + ord(binaryString[2])
+        self.recType = (binaryString[3] << 8) + binaryString[2]
         self.recLen = littleEndian.readInt(binaryString, 4)
 
     def printHeader(self):
-        print 'recVersion: 0x%X\r\nrecInstance: 0x%03X\r\nrecType: 0x%04X\r\nrecLength: %d\r\n' \
-        %(self.recVer  ,self.recInstance ,self.recType  ,self.recLen)
+        print('recVersion: 0x%X\r\nrecInstance: 0x%03X\r\nrecType: 0x%04X\r\nrecLength: %d\r\n' \
+        %(self.recVer  ,self.recInstance ,self.recType  ,self.recLen))
 
 
 
@@ -42,16 +42,16 @@ class record:
             self = ppt_atom(binary)
 
         if isinstance(self, ppt_container):
-            print 'I am a container!'
+            print('I am a container!')
         elif isinstance(self, ppt_atom):
-            print 'I am an atom!'
+            print('I am an atom!')
         elif isinstance(self, record):
-            print 'Damn! I am just a not further specified record'
+            print('Damn! I am just a not further specified record')
 
     def unfold(self):
         pass
     def printContent(self):
-        print 'Oops! You should never see this!'
+        print('Oops! You should never see this!')
 
 
 class ppt_container():
@@ -95,14 +95,14 @@ class ppt_container():
     def printStructure(self, level):
         indent = '     '*level
         if self.numberOfChilds == 0: return
-        print indent + 'children[%d]'  %self.numberOfChilds
-        print indent + '--------->'
+        print(indent + 'children[%d]'  %self.numberOfChilds)
+        print(indent + '--------->')
         ChildNumber = 0
         for child in self.children:
-            print indent + 'ChildNumber: ', ChildNumber
+            print(indent + 'ChildNumber: ', ChildNumber)
             ChildNumber = ChildNumber+1
             child.printStructure(level+1)
-        print indent + '<---------'
+        print(indent + '<---------')
 
 
 class ppt_atom():
@@ -119,23 +119,23 @@ class ppt_atom():
 
     def printStructure(self, level):
         indent = '     '*level
-        print indent + 'end of structure'
+        print(indent + 'end of structure')
 
 
     def getContent(self):
         if self.head.recType == 0x0FBA:
             cstring = ''
             for index in range(0, self.head.recLen, 2):
-                cstring = cstring + self.binaryData[index]
+                cstring = cstring + chr(self.binaryData[index])
             return cstring
         return self.binaryData
 
     def printContent(self):
         cstring = self.getContent()
         if self.head.recType == 0x0FBA:
-            print cstring
+            print(cstring)
         else:
-            print 'data is not printable!'
+            print('data is not printable!')
 
 
 def findExternalOleObjectStorageLocation(current_user_stream, ppt_document_stream):
@@ -168,10 +168,12 @@ def findExternalOleObjectStorageLocation(current_user_stream, ppt_document_strea
 
     persistDirectoryAtom = ppt_atom(ppt_document_stream[userEditAtom.offestPersistDirectory:])
     persistId16bits = littleEndian.readShort(persistDirectoryAtom.binaryData, 0)
-    persistId4bits = (ord(persistDirectoryAtom.binaryData[2]) & 0b00001111) << (8*2)
+    #persistId4bits = (ord(persistDirectoryAtom.binaryData[2]) & 0b00001111) << (8*2)
+    persistId4bits = (persistDirectoryAtom.binaryData[2] & 0b00001111) << (8*2)
     persistDirectoryAtom.persistId = persistId4bits + persistId16bits
-    persistDirectoryAtom.cPersist = ((ord(persistDirectoryAtom.binaryData[2]) & 0b11110000) >> 4) +\
-    (ord(persistDirectoryAtom.binaryData[3]) << 8)
+    #persistDirectoryAtom.cPersist = ((ord(persistDirectoryAtom.binaryData[2]) & 0b11110000) >> 4) +\
+    persistDirectoryAtom.cPersist = ((persistDirectoryAtom.binaryData[2] & 0b11110000) >> 4) +\
+    (persistDirectoryAtom.binaryData[3] << 8)
     rgPersistOffset = [None]*persistDirectoryAtom.cPersist
     for PersistOffsetEntry in range(0, persistDirectoryAtom.cPersist):
         rgPersistOffset[PersistOffsetEntry] = littleEndian.readInt(persistDirectoryAtom.binaryData, 4+PersistOffsetEntry*4)

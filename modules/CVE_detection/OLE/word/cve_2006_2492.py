@@ -19,59 +19,59 @@ class CVE_2006_2492_detector:
         self.fileName = fileName
 
     def report(self):
-        print "....: checking CVE-2006-2492"
+        print("....: checking CVE-2006-2492")
 
     def check(self):
         try:
-            fp = open(self.fileName, 'r')
+            fp = open(self.fileName, 'rb')
             content = fp.read()
             fp.close()
-        except Exception as e:
+        except Exception as error:
             if not self.args.json:
-                print e
+                print(f"CVE_2006_2492_detector: {error}")
             content = None
         possible = False
         if content:
-            re_kernel = re.compile('kernel32\.dll', re.I|re.S)
-            re_shell = re.compile('ShellExecuteExA', re.I|re.S)
-            re_startup = re.compile('GetStartupInfoA', re.I|re.S)
-            re_remote_thread = re.compile('CreateRemoteThread', re.I|re.S)
+            re_kernel = re.compile(b'kernel32\.dll', re.I|re.S)
+            re_shell = re.compile(b'ShellExecuteExA', re.I|re.S)
+            re_startup = re.compile(b'GetStartupInfoA', re.I|re.S)
+            re_remote_thread = re.compile(b'CreateRemoteThread', re.I|re.S)
             match = re_kernel.search(content)
             if match:
                 possible = True
                 if self.args.json:
                     self.json_result['signatures'].append({'match': 'Found keyword "kernel32.dll" which indicates: "May have shellcode embedded"'})
                 else:
-                    print '>>>> Found keyword "kernel32.dll" which indicates: "May have shellcode embedded"'
+                    print('>>>> Found keyword "kernel32.dll" which indicates: "May have shellcode embedded"')
             match = re_shell.search(content)
             if match:
                 possible = True
                 if self.args.json:
                     self.json_result['signatures'].append({'match': 'Found keyword "ShellExecuteExA" which indicates: "May run an executable file or a system command"'})
                 else:
-                    print '>>>> Found keyword "ShellExecuteExA" which indicates: "May run an executable file or a system command"'
+                    print('>>>> Found keyword "ShellExecuteExA" which indicates: "May run an executable file or a system command"')
             match = re_startup.search(content)
             if match:
                 possible = True
                 if self.args.json:
                     self.json_result['signatures'].append({'match': 'Found keyword "GetStartupInfoA" which indicates: "May gather system information"'})
                 else:
-                    print '>>>> Found keyword "GetStartupInfoA" which indicates: "May gather system information"'
+                    print('>>>> Found keyword "GetStartupInfoA" which indicates: "May gather system information"')
             match = re_remote_thread.search(content)
             if match:
                 possible = True
                 if self.args.json:
                     self.json_result['signatures'].append({'match': 'Found keyword "CreateRemoteThread" which indicates: "May inject code in other process"'})
                 else:
-                    print '>>>> Found keyword "CreateRemoteThread" which indicates: "May inject code in other process"'
+                    print('>>>> Found keyword "CreateRemoteThread" which indicates: "May inject code in other process"')
         if possible:
             try:
                 ole = OleFileIO_PL.OleFileIO(self.fileName)
                 wordDocStream = ole.openstream('WordDocument')
                 wordDocBuffer = wordDocStream.read()
-            except Exception as e:
-                if str(e) == 'incomplete OLE stream':
+            except Exception as error:
+                if 'incomplete OLE stream' in str(error):
                     if self.args.json:
                         self.json_result['signatures'].append({'match': 'cve-2006-2492'})
                     else:
-                        print '>>>> file might be an exploit for CVE-2006-2492'
+                        print('>>>> file might be an exploit for CVE-2006-2492')

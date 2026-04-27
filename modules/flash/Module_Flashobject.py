@@ -10,7 +10,6 @@ import imp
 import core.littleEndian as littleEndian
 import core.OleFileIO_PL as OleFileIO_PL
 
-
 class Flash_Mod:
     pathToActiveX = ''
     fileName = ''
@@ -46,15 +45,13 @@ class Flash_Mod:
                     fileNames.append(os.path.join(dirname, filename))
 
             filtered = fnmatch.filter(fileNames, '*activeX*.xml')
-
             for activeXcontrol in filtered:
                 currentControl = open(activeXcontrol, 'r')
                 controlText = currentControl.read()
-
                 #the Class-ID: D27CDB6E-AE6D-11CF-96B8-444553540000 identifies an activeX-control as flash-object
                 if self.ShockwaveFlashClassID in controlText:
                     if not self.args.quiet and not self.args.json:
-                        print activeXcontrol + " is a FlashObject!"
+                        print(activeXcontrol + " is a FlashObject!")
                     foundFlashObject = True
                     activeXBinFileName = activeXcontrol[:-3]
                     activeXBinFileName += 'bin'
@@ -66,29 +63,29 @@ class Flash_Mod:
             if self.docType == '/xl':
                 for activeXBinFileName in activeXContainers:
                     acitveXStream = open(activeXBinFileName, 'rb').read()
-                    currentOffset = acitveXStream.find('.swf')
+                    currentOffset = acitveXStream.find(b'.swf')
                     if currentOffset == -1:
-                        currentOffset = acitveXStream.find('.\x00s\x00w\x00f')
+                        currentOffset = acitveXStream.find(b'.\x00s\x00w\x00f')
                     if currentOffset != -1:
                         pathLength = 5
                         path = '.swf'
                         #reading the path from back to front, since we don't know the length of the path yet
-                        while acitveXStream[currentOffset-3:currentOffset] != '\x00\x00\x00':
-                            path = acitveXStream[currentOffset-2] + path
+                        while acitveXStream[currentOffset-3:currentOffset] != b'\x00\x00\x00':
+                            path = chr(acitveXStream[currentOffset-2]) + path
                             currentOffset = currentOffset -2
                             pathLength = pathLength+1
                         bytesForPath = littleEndian.readInt(acitveXStream, currentOffset-4)
                         #check if the length of our extracted path matches the 4 bytes in front
                         #of it, (interpreting the 4 bytes as a unsigned integer in littleendian)
                         if bytesForPath == pathLength*2 and not self.args.quiet:
-                            print 'path to .swf: ' + path
+                            print('path to .swf: ' + path)
                 if not foundFlashObject and not self.args.quiet and not self.args.json:
-                    print 'found no Flash-Objects'
+                    print('found no Flash-Objects')
                 if foundFlashObject:
                     if self.args.json:
                         self.json_result['detections'].append({'type': 'flash', 'location': None})
                     else:
-                        print "found flash object"
+                        print("found flash object")
                 return
             for activeXBinFileName in activeXContainers:
                 #make sure that our .bin files are actually OLE-files
@@ -103,7 +100,7 @@ class Flash_Mod:
                     Contents.close()
                 else:
                     if not self.args.quiet and not self.args.json:
-                        print('Contents doesn\'t exsit')
+                        print('Contents doesn\'t exist')
                     ole.close()
 
                 if littleEndian.readShort(content, 24) == 8:
@@ -115,23 +112,23 @@ class Flash_Mod:
                     for iterator in range(30, 30+pathLength):
                         if iterator % 2 == 0:
                             #every second byte will be 0x00. Office doesn't allow characters, which would have to use this second byte
-                            pathToSWFfile += content[iterator]
+                            pathToSWFfile += chr(content[iterator])
                     #print as a hex string, if you need to search manually in the .bin file
                     #print (':'.join(x.encode('hex') for x in pathToSWFfile))
                     if not self.args.quiet and not self.args.json:
-                        print 'path to swf-file: ' + pathToSWFfile
+                        print('path to swf-file: ' + pathToSWFfile)
                 else:
                     if not self.args.quiet and not self.args.json:
-                        print 'this doesn\'t seem to be an unicode string'
+                        print('this doesn\'t seem to be an unicode string')
 
                 ole.close()
             if not foundFlashObject and not self.args.quiet and not self.args.json:
-                print 'found no Flash-Objects'
+                print('found no Flash-Objects')
             if foundFlashObject:
                 if self.args.json:
                     self.json_result['detections'].append({'type': 'flash', 'location': None})
                 else:
-                    print "found flash object"
+                    print("found flash object")
         else:
             #this is a OLE-formated document
             assert OleFileIO_PL.isOleFile(fileName)
@@ -140,13 +137,13 @@ class Flash_Mod:
             if docType == '/word':
                 wordDocStream = ole.openstream('WordDocument')
                 wordDocBuffer = wordDocStream.read()
-                if 'CONTROL ShockwaveFlash.ShockwaveFlash' in wordDocBuffer:
+                if b'CONTROL ShockwaveFlash.ShockwaveFlash' in wordDocBuffer:
                     if not self.args.quiet and not self.args.json:
-                        print 'use of Shockwafe Flash detected'
+                        print('use of Shockwafe Flash detected')
                     foundFlashObject = True
                 else:
                     if not foundFlashObject and not self.args.quiet and not self.args.json:
-                        print 'found no Flash-Objects'
+                        print('found no Flash-Objects')
                     return
                 listOCXContents = []
                 listOLEPaths = ole.listdir()
@@ -160,14 +157,14 @@ class Flash_Mod:
                     OCXStream = ole.openstream(content)
                     contentBuffer = OCXStream.read()
                     #print contentBuffer
-                    currentOffset = contentBuffer.find('.swf')
+                    currentOffset = contentBuffer.find(b'.swf')
                     if currentOffset == -1:
-                        currentOffset = contentBuffer.find('.\x00s\x00w\x00f')
+                        currentOffset = contentBuffer.find(b'.\x00s\x00w\x00f')
                     if currentOffset != -1:
                         pathLength = 5
                         path = '.swf'
                         #reading the path from back to front, since we don't know the length of the path yet
-                        while contentBuffer[currentOffset-3:currentOffset] != '\x00\x00\x00':
+                        while contentBuffer[currentOffset-3:currentOffset] != b'\x00\x00\x00':
                             path = contentBuffer[currentOffset-2] + path
                             currentOffset = currentOffset -2
                             pathLength = pathLength+1
@@ -178,10 +175,10 @@ class Flash_Mod:
                             #print 'length does match!'
                             pass
                         if not self.args.quiet and not self.args.json:
-                            print 'path to .swf: ' + path
+                            print('path to .swf: ' + path)
                     else:
                         if not self.args.quiet and not self.args.json:
-                            print 'no .swf found in contents'
+                            print('no .swf found in contents')
                     OCXStream.close()
 
             elif docType == '/xl':
@@ -189,7 +186,6 @@ class Flash_Mod:
                 #import excel_structures
                 ws = excel_structures.workbook(ole)
                 foundFlashObject = ws.findFlashObjects()
-                pass
             elif docType == '/ppt':
                 ppt_structures = imp.load_source('ppt_structures', 'modules/OLE_parsing/ppt_structures.py')
                 #import ppt_structures
@@ -215,33 +211,33 @@ class Flash_Mod:
                         continue
                     contentBuffer = currentStorage.openstream('Contents').read()
 
-                    currentOffset = contentBuffer.find('.swf')
+                    currentOffset = contentBuffer.find(b'.swf')
                     if currentOffset == -1:
-                        currentOffset = contentBuffer.find('.\x00s\x00w\x00f')
+                        currentOffset = contentBuffer.find(b'.\x00s\x00w\x00f')
                     if currentOffset != -1:
                         pathLength = 5
                         path = '.swf'
                         #reading the path from back to front, since we don't know the length of the path yet
-                        while contentBuffer[currentOffset-3:currentOffset] != '\x00\x00\x00':
+                        while contentBuffer[currentOffset-3:currentOffset] != b'\x00\x00\x00':
                             path = contentBuffer[currentOffset-2] + path
                             currentOffset = currentOffset -2
                             pathLength = pathLength+1
                         if not self.args.quiet and not self.args.json:
-                            print 'path to .swf: ' + path
+                            print('path to .swf: ' + path)
                     else:
                         if not self.args.quiet and not self.args.json:
-                            print 'no .swf found in contents'
+                            print('no .swf found in contents')
                     currentStorage.close()
                     currentPersistId += 1
             else:
                 if not self.args.quiet and not self.args.json:
-                    print 'No document type was given'
+                    print('No document type was given')
 
             if not foundFlashObject and not self.args.quiet and not self.args.json:
-                    print 'found no Flash-Objects'
+                    print('found no Flash-Objects')
             if foundFlashObject:
                 if self.args.json:
                     self.json_result['detections'].append({'type': 'flash', 'location': None})
                 else:
-                    print "found flash object"
+                    print("found flash object")
             ole.close()

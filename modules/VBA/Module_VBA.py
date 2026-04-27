@@ -9,6 +9,7 @@ from itertools import groupby
 
 import core.littleEndian as littleEndian
 import core.OleFileIO_PL as OleFileIO_PL
+import core.error_utils as error_utils
 
 macroDecoder = imp.load_source('macroDecoder', 'modules/VBA/auxiliary/macroDecoder.py')
 
@@ -39,7 +40,7 @@ class VBA_Mod:
             if self.args.json:
                 pass
             else:
-                print e
+                error_utils.print_error("Reading VBA file", e)
         # Check for auto_open string in macro
         re_may_obfuscate = re.compile('Chr\(.+?\)', re.I|re.S)
         re_auto_open = re.compile('Sub AutoOpen\(\)', re.I|re.S)
@@ -59,67 +60,67 @@ class VBA_Mod:
             if self.args.json:
                 self.json_result['signatures'].append({'match': 'Found suspicious keyword "URLDownloadToFileA" which indicates: "May attempt to download a file from the Internet"'})
             else:
-                print '>>>> Found suspicious keyword "URLDownloadToFileA" which indicates: "May attempt to download a file from the Internet"'
+                print('>>>> Found suspicious keyword "URLDownloadToFileA" which indicates: "May attempt to download a file from the Internet"')
         match = re_may_obfuscate.search(content)
         if match:
             if self.args.json:
                 self.json_result['signatures'].append({'match': 'Found suspicious keyword "Chr" which indicates: "May attempt to obfuscate specific strings"'})
             else:
-                print '>>>> Found suspicious keyword "Chr" which indicates: "May attempt to obfuscate specific strings"'
+                print('>>>> Found suspicious keyword "Chr" which indicates: "May attempt to obfuscate specific strings"')
         match = re_auto_open.search(content)
         if match:
             if self.args.json:
                 self.json_result['signatures'].append({'match': 'Found keyword "AutoOpen" which indicates: "Runs when the Word document is opened"'})
             else:
-                print '>>>> Found keyword "AutoOpen" which indicates: "Runs when the Word document is opened"'
+                print('>>>> Found keyword "AutoOpen" which indicates: "Runs when the Word document is opened"')
         match = re_workbook_open.search(content)
         if match:
             if self.args.json:
                 self.json_result['signatures'].append({'match': 'Found keyword "Workbook_Open" which indicates: "Runs when the Excel Workbook is opened"'})
             else:
-                print '>>>> Found keyword "Workbook_Open" which indicates: "Runs when the Excel Workbook is opened"'
+                print('>>>> Found keyword "Workbook_Open" which indicates: "Runs when the Excel Workbook is opened"')
         match = re_may_write_to_file.search(content)
         if match:
             if self.args.json:
                 self.json_result['signatures'].append({'match': 'Found suspicious keywords "Open ... For Output" which indicates: "May write to a file"'})
             else:
-                print '>>>> Found suspicious keywords "Open ... For Output" which indicates: "May write to a file"'
+                print('>>>> Found suspicious keywords "Open ... For Output" which indicates: "May write to a file"')
         match = re_may_write_to_file_2.search(content)
         if match:
             if self.args.json:
                 self.json_result['signatures'].append({'match': 'Found suspicious keyword "Print #" which indicates: "May write to a file (if combined with Open)"'})
             else:
-                print '>>>> Found suspicious keyword "Print #" which indicates: "May write to a file (if combined with Open)"'
+                print('>>>> Found suspicious keyword "Print #" which indicates: "May write to a file (if combined with Open)"')
         match = re_may_get_files_internet.search(content)
         if match:
             if self.args.json:
                 self.json_result['signatures'].append({'match': 'Found suspicious keyword "GET" which indicates: "May retrieve files from the internet""'})
             else:
-                print '>>>> Found suspicious keyword "GET" which indicates: "May retrieve files from the internet"'
+                print('>>>> Found suspicious keyword "GET" which indicates: "May retrieve files from the internet"')
         match = re_may_execute_file.search(content)
         if match:
             if self.args.json:
                 self.json_result['signatures'].append({'match': 'Found suspicious keyword "Shell" which indicates: "May run an executable file or a system command"'})
             else:
-                print '>>>> Found suspicious keyword "Shell" which indicates: "May run an executable file or a system command"'
+                print('>>>> Found suspicious keyword "Shell" which indicates: "May run an executable file or a system command"')
         match = re_may_read_environment.search(content)
         if match:
             if self.args.json:
                 self.json_result['signatures'].append({'match': 'Found suspicious keyword "Environ" which indicates: "May read system environment variables"'})
             else:
-                print '>>>> Found suspicious keyword "Environ" which indicates: "May read system environment variables"'
+                print('>>>> Found suspicious keyword "Environ" which indicates: "May read system environment variables"')
         match = re_may_create_object.search(content)
         if match:
             if self.args.json:
                 self.json_result['signatures'].append({'match': 'Found suspicious keyword "CreateObject" which indicates: "May create an OLE object"'})
             else:
-                print '>>>> Found suspicious keyword "CreateObject" which indicates: "May create an OLE object"'
+                print('>>>> Found suspicious keyword "CreateObject" which indicates: "May create an OLE object"')
         match = re_run_on_close.search(content)
         if match:
             if self.args.json:
                 self.json_result['signatures'].append({'match': 'Found suspicious keyword "Document_Close" which indicates: "Runs when the Word document is closed"'})
             else:
-                print '>>>> Found suspicious keyword "Document_Close" which indicates: "Runs when the Word document is closed"'
+                print('>>>> Found suspicious keyword "Document_Close" which indicates: "Runs when the Word document is closed"')
         match = re_may_domain.findall(content)
         if match:
             urlpatterns = []
@@ -131,7 +132,7 @@ class VBA_Mod:
             if self.args.json:
                 self.json_result['signatures'].append({'match': 'Found URL like patterns in decoded VBA strings: %s' % (urlpatterns)})
             else:
-                print '>>>> Found URL like patterns in decoded VBA strings: %s' % (urlpatterns)
+                print('>>>> Found URL like patterns in decoded VBA strings: %s' % (urlpatterns))
 
     def extractMacroCode(self):
         foundMacroCode = False
@@ -141,14 +142,13 @@ class VBA_Mod:
         if self.mode == 0:
             if not os.path.exists(fileName + self.docType + '/vbaProject.bin'):
                 if not self.args.quiet and not self.args.json:
-                    print 'no macro-code'
+                    print('no macro-code')
                 return
             assert OleFileIO_PL.isOleFile(fileName + self.docType + '/vbaProject.bin')
 
             ole = OleFileIO_PL.OleFileIO(fileName + self.docType + '/vbaProject.bin')
             prefix = 'VBA/'
             oleFileList = [ole]
-
         else:
             assert OleFileIO_PL.isOleFile(fileName)
 
@@ -161,7 +161,7 @@ class VBA_Mod:
             elif self.docType == '/ppt':
                 prefix = 'VBA/'
                 if not self.args.quiet and not self.args.json:
-                    print 'extracting VBA-Storage...'
+                    print('extracting VBA-Storage...')
                 current_user_stream = ole.openstream('Current User').read()
                 document_stream = ole.openstream('PowerPoint Document').read()
                 ppt_structures = imp.load_source('ppt_structures', 'modules/OLE_parsing/ppt_structures.py')
@@ -177,9 +177,7 @@ class VBA_Mod:
                     for externalOleObjectStorage in decompressedStorageFiles:
                         openOleFile = OleFileIO_PL.OleFileIO(externalOleObjectStorage)
                         oleFileList += [openOleFile]
-
         for ole in oleFileList:
-
             if ole.exists(prefix+'dir'):
                     dir = ole.openstream(prefix+'dir')
                     content = dir.read()
@@ -187,19 +185,16 @@ class VBA_Mod:
             else:
                 ole.close()
                 continue
+            moduleOffsetRecordIdentifier = b'\x31\x00\x04\x00\x00\x00'
+            moduleNameRecordIdentifier = b'\x19\x00'
 
-            moduleOffsetRecordIdentifier = '\x31\x00\x04\x00\x00\x00'
-            moduleNameRecordIdentifier = '\x19\x00'
-
-            decompressedDir = ''
+            decompressedDir = bytearray()
             dirSequences = []
 
             dirSequences = macroDecoder.getSequences(content[1:])
-
             #decode dir-stream in order to find metadata about the macro streams
             for sequence in dirSequences:
                 decompressedDir = macroDecoder.decodeSequence(decompressedDir, sequence)
-
             #find all Module Offset Records
             current = 0
             listModuleOffsetRecords = []
@@ -207,35 +202,33 @@ class VBA_Mod:
                 foundAt = decompressedDir.find(moduleOffsetRecordIdentifier, current)
                 listModuleOffsetRecords.append(foundAt)
                 current = foundAt+1
-
             #find the name of the modules/streams corresponding to the found Module Offsets
             listModuleNames = []
             start = 0
             for count in range(0,len(listModuleOffsetRecords)):
                 moduleName = ''
                 index = decompressedDir.rfind(moduleNameRecordIdentifier, start, listModuleOffsetRecords[count])
-                nameLength = ord(decompressedDir[index+5]) << 24
-                nameLength += ord(decompressedDir[index+4]) << 16
-                nameLength += ord(decompressedDir[index+3]) << 8
-                nameLength += ord(decompressedDir[index+2])
+                nameLength = decompressedDir[index+5] << 24
+                nameLength += decompressedDir[index+4] << 16
+                nameLength += decompressedDir[index+3] << 8
+                nameLength += decompressedDir[index+2]
                 for nameCharacter in range(0,nameLength):
-                    moduleName += decompressedDir[index + 6 + nameCharacter]
+                    #moduleName += decompressedDir[index + 6 + nameCharacter]
+                    moduleName += chr(decompressedDir[index + 6 + nameCharacter])
                 listModuleNames.append(moduleName)
                 start = listModuleOffsetRecords[count]
-
             #find the Offsets in the Module Streams, where the textual reprensentation of the macrocode starts
             listCodeOffsets = []
             for offsets in listModuleOffsetRecords:
                 try:
-                    codeOffset = ord(decompressedDir[offsets+9]) << 24
-                    codeOffset += ord(decompressedDir[offsets+8]) << 16
-                    codeOffset += ord(decompressedDir[offsets+7]) << 8
-                    codeOffset += ord(decompressedDir[offsets+6])
+                    codeOffset = decompressedDir[offsets+9] << 24
+                    codeOffset += decompressedDir[offsets+8] << 16
+                    codeOffset += decompressedDir[offsets+7] << 8
+                    codeOffset += decompressedDir[offsets+6]
                 except:
                     continue
 
                 listCodeOffsets.append(codeOffset)
-
             listEncodedMacroCode = []
             current = 0
             for moduleName in listModuleNames:
@@ -244,13 +237,13 @@ class VBA_Mod:
 
                 if ole.exists(path):
                     if not self.args.quiet and not self.args.json:
-                        print 'decoding module:', moduleName
+                        print(f'decoding module: {moduleName}')
                     oleStream = ole.openstream(path)
                     codeBuffer = oleStream.read()
                 else:
                     oleStream = None
                     if not self.args.quiet and not self.args.json:
-                        print path, 'doesn\'t exist'
+                        print(f'{path} doesn\'t exist')
 
                 try:
                     codeBuffer = codeBuffer[listCodeOffsets[current]+1:]
@@ -284,27 +277,24 @@ class VBA_Mod:
                     os.makedirs(folderName)
             else:
                 folderName = folderName1
-
             decodedMacroCode = open(os.path.abspath(folderName + '/macroCode.txt'), 'a')
             codeSequences = []
             for encodedSequences in listEncodedMacroCode:
                 codeSequences = macroDecoder.getSequences(encodedSequences)
-
-
-                decompressedMacroCode = ''
+                #decompressedMacroCode = ''
+                decompressedMacroCode = bytearray()
                 for sequence in codeSequences:
-
                     decompressedMacroCode = macroDecoder.decodeSequence(decompressedMacroCode, sequence)
-                decodedMacroCode.write(decompressedMacroCode)
+                #decodedMacroCode.write(decompressedMacroCode)
+                decodedMacroCode.write(decompressedMacroCode.decode('latin-1'))
                 decodedMacroCode.write('\r\n\r\n\r\n\r\n')
-
             decodedMacroCode.close()
             macro_save_location = os.path.abspath(folderName + '/macroCode.txt')
             if not self.args.quiet:
                 if self.args.json:
                     self.json_result['debug'].append('saved macrocode to file: %s' % (macro_save_location))
                 else:
-                    print 'saved macrocode to file: %s' % (macro_save_location)
+                    print('saved macrocode to file: %s' % (macro_save_location))
             foundMacroCode = True
 
             '''blackList = ["kernel32" , "CreateThread", "VirtualAlloc", "RtlMoveMemory"]
@@ -324,10 +314,10 @@ class VBA_Mod:
             ole.close()
 
         if not foundMacroCode and not self.args.quiet and not self.args.json:
-            print 'no macro-code'
+            print('no macro-code')
         elif foundMacroCode:
             if self.args.json:
                 self.json_result['detections'].append({'type': 'macro code', 'location': macro_save_location})
             else:
-                print '>> macro code detected!'
+                print('>> macro code detected!')
             self.checkMacroCode(macro_save_location)

@@ -22,7 +22,7 @@ class FtCmo:
 
     def __init__(self, binary):
         if len(binary) != 22:
-            print 'length doesn\'t match the length of a regular FtCmo structure'
+            print('length doesn\'t match the length of a regular FtCmo structure')
             return
         self.ft = littleEndian.readShort(binary, 0)
         self.cb = littleEndian.readShort(binary, 2)
@@ -33,7 +33,7 @@ class FtCmo:
         self.unused9 = littleEndian.readInt(binary, 14)
         self.unused10 = littleEndian.readInt(binary, 18)
         if self.ft != 0x15 or self.cb != 0x12:
-            print 'Error parsing a FtCmo-structure'
+            print('Error parsing a FtCmo-structure')
             return None
 
 class FtGmo:
@@ -107,9 +107,12 @@ class FtSbs:
         self.dPage = littleEndian.readSignedShort(binary, 16)
         self.fHoriz = littleEndian.readShort(binary, 18)
         self.dxScroll = littleEndian.readSignedShort(binary, 20)
-        self.flags = (ord(binary[22]) & 0xf0) >> 4
-        self.unused2 = (ord(binary[22]) & 0x0f) << 8
-        self.unused2 += ord(binary[23])
+        #self.flags = (ord(binary[22]) & 0xf0) >> 4
+        self.flags = (binary[22] & 0xf0) >> 4
+        #self.unused2 = (ord(binary[22]) & 0x0f) << 8
+        self.unused2 = (binary[22] & 0x0f) << 8
+        #self.unused2 += ord(binary[23])
+        self.unused2 += binary[23]
 
 
     def validate(self):
@@ -230,7 +233,8 @@ class FtLbsData:
             self.cLines = littleEndian.readShort(binary, firstByteOfCLines)
             self.iSel = littleEndian.readShort(binary, firstByteOfCLines + 2)
             ########################
-            self.flags = ord(binary[firstByteOfCLines + 4])
+            #self.flags = ord(binary[firstByteOfCLines + 4])
+            self.flags = binary[firstByteOfCLines + 4]
             self.lct = littleEndian.readShort(binary, firstByteOfCLines + 5)
             ########################
             #excel documentation is wrong about the combination of flags+lct (MS-XLS p. 717)
@@ -257,10 +261,6 @@ class FtLbsData:
                 self.sizeInBytes = firstByteOfBsels
             if self.flags & 0b00001100 != 0x00:
                 self.bsels = binary[firstByteOfBsels:firstByteOfBsels + self.cLines]
-
-
-
-
 
     def validate(self):
         if self.ft != 0x0013:
@@ -351,14 +351,16 @@ class PictFmlaEmbededInfo:
     def __init__(self, binary):
         self.ttb = binary[0]
         self.cbClass = binary[1]
-        self.stClass = XLUnicodeStringNoCch(binary[3:], ord(self.cbClass))
+        #self.stClass = XLUnicodeStringNoCch(binary[3:], ord(self.cbClass))
+        self.stClass = XLUnicodeStringNoCch(binary[3:], self.cbClass)
 
 class XLUnicodeStringNoCch:
     doubleByte = 0x00
     characters = ''
 
     def __init__(self, binary, length):
-        self.doubleByte = ord(binary[0]) >> 7
+        #self.doubleByte = ord(binary[0]) >> 7
+        self.doubleByte = binary[0] >> 7
         if self.doubleByte == 0:
             self.characters = binary[1:1+length]
         else:
@@ -369,7 +371,8 @@ class XLUnicodeString:
     def __init__(self, binary):
         self.sizeInBytes = 0
         self.cch = littleEndian.readShort(binary, 0)
-        self.fHighByte = ord(binary[2])
+        #self.fHighByte = ord(binary[2])
+        self.fHighByte = binary[2]
         if self.fHighByte > 0x00:
             self.rgb = binary[3:3+(self.cch*2)]
             self.sizeInBytes = 3 + (self.cch * 2)
@@ -391,9 +394,10 @@ class PtgTbl:
     col = 0x0000
 
     def __init__(self, binary):
-        self.ptg = ord(binary[0])
+        #self.ptg = ord(binary[0])
+        self.ptg = binary[0]
         if self.ptg != 0x02:
-            print 'Error parsing a PtgTbl-structure'
+            print('Error parsing a PtgTbl-structure')
             return None
         col = littleEndian.readShort(binary,1)
         row = littleEndian.readShort(binary,3)
@@ -436,7 +440,8 @@ class BOF:
         self.rupYear =  littleEndian.readShort(binary, 6)
         self.bitmap = (littleEndian.readInt(binary, 8)) & int('11111111111111111110000000000000',2)
         self.verLowestBiff = binary[12]
-        self.bitmap2 = ord(binary[13]) & int('11110000',2)
+        #self.bitmap2 = ord(binary[13]) & int('11110000',2)
+        self.bitmap2 = binary[13] & 0xF0
 
 class Obj:
 
@@ -511,18 +516,16 @@ class Obj:
                 #do nothing
                 pass
 
-
         if self.cmo.ot == 0x0B:
             self.checkBox = FtCblsData(binary[offset:offset+12])
-            self.offset += 12
+            offset += 12
         elif self.cmo.ot == 0x0C:
             self.checkBox = FtCblsData(binary[offset:offset+12])
             self.radioButton = FtRboData(binary[offset+12:offset+20])
-            self.offset += 20
+            offset += 20
         elif self.cmo.ot == 0x0D:
             self.edit = FtEdoData(binary[offset:offset+12])
             offset += 12
-
         elif self.cmo.ot in [0x12, 0x14]:
             self.list = FtLbsData(binary[offset:], self.cmo.ot)
             offset += self.list.sizeInBytes
@@ -539,19 +542,18 @@ class Obj:
 
 
 class workbook:
-    worksheetStreams = []
-    workbookStream = ''
+    workbookStream = b''
     oleObject = None
     offset = 0
+
     def __init__(self, oleObject):
+        self.worksheetStreams = []
         self.oleObject = oleObject
         self.workbookStream = (oleObject.openstream('Workbook')).read()
         #find all worksheets in the excel-file
         self.worksheetStreams.append(worksheet(self.workbookStream, self.offset))
-
         while self.worksheetStreams[-1].currentIndex < len(self.workbookStream):
             self.worksheetStreams.append(worksheet(self.workbookStream, self.worksheetStreams[-1].currentIndex))
-
 
     def findFlashObjects(self):
         foundFlashObject = False
@@ -570,7 +572,7 @@ class workbook:
             if found:
                 foundScriptlet = True
         if foundScriptlet:
-            print 'detected use of MS Scriptlet-Component'
+            print('detected use of MS Scriptlet-Component')
         return foundScriptlet
 
 class worksheet:
@@ -631,33 +633,34 @@ class worksheet:
                     objectRecord = Obj(binaryRecord[4:])
                     #check if a found obj-record has a pictFmla, which is mandatory for flash-objects
                     if objectRecord.cmo.ot == 0x08:
-                        if objectRecord.pictFmla.fmla.fmla.rgce.ptg == 0x02 and \
-                        'Shockwave' in objectRecord.pictFmla.fmla.embededInfo.stClass.characters:
+                        if objectRecord.pictFmla.fmla.fmla.rgce.ptg == 0x02 and b'Shockwave' in objectRecord.pictFmla.fmla.embededInfo.stClass.characters:
                             #get offset of the associated acitveX control in the "ctls"-stream
                             ctlsStream = oleObject.openstream('Ctls').read()[objectRecord.pictFmla.IposInCtlStm:\
                             objectRecord.pictFmla.IposInCtlStm+objectRecord.pictFmla.cbBufInCtlStm]
                             #look for ".swf" suffix and extract path (relative or absolute) to the embedded flash-file
-                            currentOffset = ctlsStream.find('.swf')
+                            currentOffset = ctlsStream.find(b'.swf')
                             if currentOffset == -1:
-                                currentOffset = ctlsStream.find('.\x00s\x00w\x00f')
+                                currentOffset = ctlsStream.find(b'.\x00s\x00w\x00f')
                             if currentOffset != -1:
                                 pathLength = 5
                                 path = '.swf'
                                 #reading the path from back to front, since we don't know the length of the path yet
-                                while ctlsStream[currentOffset-3:currentOffset] != '\x00\x00\x00':
-                                    path = ctlsStream[currentOffset-2] + path
+                                while ctlsStream[currentOffset-3:currentOffset] != b'\x00\x00\x00':
+                                    path = chr(ctlsStream[currentOffset-2]) + path
                                     currentOffset = currentOffset -2
                                     pathLength = pathLength+1
                                 bytesForPath = littleEndian.readInt(ctlsStream, currentOffset-4)
                                 #check if the length of our extracted path matches the 4 bytes in front
                                 #of it, (interpreting the 4 bytes as a unsigned integer in littleendian)
                                 if bytesForPath == pathLength*2:
-                                    print 'path to .swf: ' + path
+                                    print('path to .swf: ' + path)
                             foundFlashObject = True
                 except AttributeError:
                     pass
+                except Exception as error:
+                    print("findFlashObjects: %s" % error)
+                    raise
         return foundFlashObject
-
 
     def findScriptlets(self, oleObject):
         foundScriptlet = False
@@ -669,8 +672,7 @@ class worksheet:
                     objectRecord = Obj(binaryRecord[4:])
                     #check if a found obj-record has a pictFmla, which is mandatory for scriptlet-controls
                     if objectRecord.cmo.ot == 0x08:
-                        if objectRecord.pictFmla.fmla.fmla.rgce.ptg == 0x02 and \
-                        'ScriptBridge' in objectRecord.pictFmla.fmla.embededInfo.stClass.characters:
+                        if objectRecord.pictFmla.fmla.fmla.rgce.ptg == 0x02 and b'ScriptBridge' in objectRecord.pictFmla.fmla.embededInfo.stClass.characters:
                             #get offset of the associated acitveX control in the "ctls"-stream
                             ctlsStream = oleObject.openstream('Ctls').read()[objectRecord.pictFmla.IposInCtlStm:\
                             objectRecord.pictFmla.IposInCtlStm+objectRecord.pictFmla.cbBufInCtlStm]
@@ -682,8 +684,11 @@ class worksheet:
                                 for character in range(22, 22+(pathLength*2), 2):
                                     pathToSourceFile = pathToSourceFile + ctlsStream[character]
                                 foundScriptlet = True
-                                print 'path to source file: ', pathToSourceFile
+                                print('path to source file: ', pathToSourceFile)
                 except AttributeError:
                     pass
+                except Exception as error:
+                    print("findScriptlets: %s" % error)
+                    raise
         return foundScriptlet
 

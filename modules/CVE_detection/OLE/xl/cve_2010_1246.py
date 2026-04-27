@@ -45,22 +45,22 @@ class RTD_Record:
     def checkIfMalformed(self):
         if self.frtHeader.valitdate() != 0:
             if not self.args.json:
-                print 'detected malformed RTD-Record'
-                print 'file might be an exploit for CVE-2010-1246'
+                print('detected malformed RTD-Record')
+                print('file might be an exploit for CVE-2010-1246')
             else:
                 self.json_result['signatures'].append({'match': 'cve-2010-1246'})
             return
         if self.XLUnicodeStringSegmentedRTD.valitdate() != 0:
             if not self.args.json:
-                print 'detected malformed RTD-Record'
-                print 'file might be an exploit for CVE-2010-1246'
+                print('detected malformed RTD-Record')
+                print('file might be an exploit for CVE-2010-1246')
             else:
                 self.json_result['signatures'].append({'match': 'cve-2010-1246'})
             return
         if self.rtdOper.valitdate() != 0:
             if not self.args.json:
-                print 'detected malformed RTD-Record'
-                print 'file might be an exploit for CVE-2010-1246'
+                print('detected malformed RTD-Record')
+                print('file might be an exploit for CVE-2010-1246')
             else:
                 self.json_result['signatures'].append({'match': 'cve-2010-1246'})
             return
@@ -84,7 +84,7 @@ class frtHeader:
 class XLUnicodeStringSegmentedRTD:
     def __init__(self, binary):
         self.cch = littleEndian.readInt(binary, 0)
-        self.fHighByte = ord(binary[4])
+        self.fHighByte = binary[4]
         if self.fHighByte == 0x00:
             self.rgb = binary[5:5+self.cch]
         elif self.fHighByte == 0x01:

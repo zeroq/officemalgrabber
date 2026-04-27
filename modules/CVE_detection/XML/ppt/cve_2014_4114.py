@@ -38,4 +38,4 @@ class CVE_2014_4114_detector:
                 if self.args.json:
                     self.json_result['signatures'].append({'match': 'cve-2014-4114'})
                 else:
-                    print ">> possible CVE-2014-4114 exploit attempt found: %s" % (item)
+                    print(">> possible CVE-2014-4114 exploit attempt found: %s" % (item))

@@ -50,14 +50,14 @@ class CVE_2010_822_detector:
                         if self.args.json:
                             self.json_result['signatures'].append({'match': 'cve-2010-0822'})
                         else:
-                            print 'found exploit for CVE-2010-0822'
+                            print('found exploit for CVE-2010-0822')
                         break
 
     def checkIfMalformed(self, ObjRecord):
         if ObjRecord.validate() != 0:
             if not self.args.json:
-                print 'detected malformed Obj-Record'
-                print 'file might be an exploit for CVE-2010-0822'
+                print('detected malformed Obj-Record')
+                print('file might be an exploit for CVE-2010-0822')
             return
 
 

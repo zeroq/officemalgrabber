@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 expandtab
 
@@ -33,7 +33,7 @@ def getFat(binaryContent, sectorsize):
     fatSectors = []
     current = 0
     fatSect = littleEndian.readInt(header, current)
-    while not fatSect in (0xFFFFFFFEL, 0xFFFFFFFFL) and current < 512:
+    while not fatSect in (0xFFFFFFFE, 0xFFFFFFFF) and current < 512:
         fatSectors += [fatSect+1]
         current += 4
         fatSect = littleEndian.readInt(header, current)
@@ -92,37 +92,36 @@ if __name__ == '__main__':
                 json_result['debug'].append("no such file: %s" % (fileName))
                 json_response.append(json_result)
             else:
-                print "no such file: %s" % (fileName)
+                print("no such file: %s" % (fileName))
             continue
         #[PL]: added constants for Sector IDs (from AAF specifications)
-        MAXREGSECT = 0xFFFFFFFAL; # maximum SECT
-        DIFSECT    = 0xFFFFFFFCL; # (-4) denotes a DIFAT sector in a FAT
-        FATSECT    = 0xFFFFFFFDL; # (-3) denotes a FAT sector in a FAT
-        ENDOFCHAIN = 0xFFFFFFFEL; # (-2) end of a virtual stream chain
-        FREESECT   = 0xFFFFFFFFL; # (-1) unallocated sector
+        MAXREGSECT = 0xFFFFFFFA; # maximum SECT
+        DIFSECT    = 0xFFFFFFFC; # (-4) denotes a DIFAT sector in a FAT
+        FATSECT    = 0xFFFFFFFD; # (-3) denotes a FAT sector in a FAT
+        ENDOFCHAIN = 0xFFFFFFFE; # (-2) end of a virtual stream chain
+        FREESECT   = 0xFFFFFFFF; # (-1) unallocated sector
         MAGIC_VALUES = [MAXREGSECT, DIFSECT, FATSECT, ENDOFCHAIN, FREESECT]
         line = '_'*60
         doubleLine = '='*60
         fileFormat = ''
         docType = ''
         if not args.quiet and not args.json:
-            print doubleLine
+            print(doubleLine)
         if args.json:
             json_result['filename'] = fileName
         else:
-            print 'scanning document-file:', fileName
+            print(f'scanning document-file: {fileName}')
         if not args.quiet and not args.json:
-            print line
+            print(line)
         sys.stdout.flush()
         try:
             Module_VBA = imp.load_source('Module_VBA', 'modules/VBA/Module_VBA.py')
             if not args.quiet and not args.json:
-                print "checking file format ...",
-            sys.stdout.flush()
+                print("checking file format ...", end=" ", flush=True)
             if OleFileIO_PL.isOleFile(fileName):
                 fileFormat = '/OLE'
                 if not args.quiet and not args.json:
-                    print fileFormat
+                    print(fileFormat)
                     sys.stdout.flush()
                 ole = OleFileIO_PL.OleFileIO(fileName)
                 '''attempt to scan for malware placed behind FAT-addressed storage
@@ -155,22 +154,22 @@ if __name__ == '__main__':
                         json_result['debug'].append('file seems to be neither .docx, .xlsx nor .pptx')
                         json_response.append(json_result)
                     else:
-                        print 'file seems to be neither .docx, .xlsx nor .pptx'
+                        print('file seems to be neither .docx, .xlsx nor .pptx')
                     #skip this file as it is probably an activeX.bin
                     continue
                 try:
                     if not args.json:
-                        print ".: checking for macro code ...",
+                        print(".: checking for macro code ...", end=" ", flush=True)
                     extractor = Module_VBA.VBA_Mod(fileName, 1, docType, args, json_result)
                     extractor.extractMacroCode()
                 except Exception as e:
                     if args.json:
                         json_result['debug'].append('%s' % (e))
                     else:
-                        print e
+                        print(e)
                 try:
                     if not args.json:
-                        print ".: checking for flash objects ...",
+                        print(".: checking for flash objects ...", end=" ", flush=True)
                     Module_Flashobject = imp.load_source('Module_Flashobject', 'modules/flash/Module_Flashobject.py')
                     flashMod = Module_Flashobject.Flash_Mod(fileName, 1, docType, args, json_result)
                     flashMod.locateFlashObjects()
@@ -178,10 +177,10 @@ if __name__ == '__main__':
                     if args.json:
                         json_result['debug'].append('%s' % (e))
                     else:
-                        print e
+                        print(e)
                 try:
                     if not args.json:
-                        print ".: checking for javascript code ...",
+                        print(".: checking for javascript code ...", end=" ", flush=True)
                     Module_Javascript = imp.load_source('Module_Javascript', 'modules/javascript/Module_Javascript.py')
                     JSMod = Module_Javascript.JS_Mod(fileName, 1, docType, args, json_result)
                     JSMod.locateJavascriptSource()
@@ -189,13 +188,13 @@ if __name__ == '__main__':
                     if args.json:
                         json_result['debug'].append('%s' % (e))
                     else:
-                        print e
+                        print(e)
                 extractionFolder = None
             else:
                 #the document being scanned is in the new xml-based format
                 fileFormat = '/XML'
                 if not args.quiet and not args.json:
-                    print fileFormat
+                    print(fileFormat)
                     sys.stdout.flush()
 
                 """ determine folder where to extract XML parts """
@@ -206,8 +205,7 @@ if __name__ == '__main__':
 
                 if zipfile.is_zipfile(fileName):
                     if not args.quiet and not args.json:
-                        print "extracting file ...",
-                        sys.stdout.flush()
+                        print("extracting file ...", end=" ", flush=True)
                     try:
                         extractionFolder = omg_unzip(fileName, folderName)
                     except zipfile.BadZipfile:
@@ -215,18 +213,18 @@ if __name__ == '__main__':
                             json_result['debug'].append('failed to extract XML-based document:', fileName)
                             json_response.append(json_result)
                         else:
-                            print
-                            print 'failed to extract XML-based document:', fileName
+                            print()
+                            print(f'failed to extract XML-based document: {fileName}')
                         continue
                     if not args.quiet and not args.json:
-                        print "done"
+                        print("done")
                     sys.stdout.flush()
                 else:
                     if args.json:
                         json_result['debug'].append("this is not a zip file")
                         json_response.append(json_result)
                     else:
-                        print "this is not a zip file"
+                        print("this is not a zip file")
                     continue
 
                 if os.path.exists(os.path.join(folderName, "word")):
@@ -240,20 +238,18 @@ if __name__ == '__main__':
                         json_result['debug'].append('could not determine filetype, skipping this file (%s)' % (folderName))
                         json_response.append(json_result)
                     else:
-                        print 'could not determine filetype, skipping this file (%s)' % (folderName)
+                        print(f'could not determine filetype, skipping this file {folderName}')
                     continue
 
                 #search for VBA-Macros
                 if not args.quiet and not args.json:
-                    print "searching for VBA ...",
-                    sys.stdout.flush()
+                    print("searching for VBA ...", end=" ", flush=True)
                 extractor = Module_VBA.VBA_Mod(folderName, 0, docType, args, json_result)
                 extractor.extractMacroCode()
 
                 #search for flash-objects
                 if not args.quiet and not args.json:
-                    print "searching for FLASH ...",
-                    sys.stdout.flush()
+                    print("searching for FLASH ...", end=" ", flush=True)
                 Module_Flashobject = imp.load_source('Module_Flashobject', 'modules/flash/Module_Flashobject.py')
                 #import modules/flash/Module_Flashobject
                 flashMod = Module_Flashobject.Flash_Mod(folderName, 0, docType, args, json_result)
@@ -261,8 +257,7 @@ if __name__ == '__main__':
 
                 #search for javascript aka MS scriptlett-component
                 if not args.quiet and not args.json:
-                    print "searching for JavaScript ...",
-                    sys.stdout.flush()
+                    print("searching for JavaScript ...", end=" ", flush=True)
                 Module_Javascript = imp.load_source('Module_Javascript', 'modules/javascript/Module_Javascript.py')
                 #import modules/javascript/Module_Javascript
                 JSMod = Module_Javascript.JS_Mod(folderName, 0, docType, args, json_result)
@@ -277,22 +272,20 @@ if __name__ == '__main__':
                 #doctype: defines wether the document is a word-, excel- or powerpoint-document
             #be sure too add this wrapper to your newly created plugins
             if not args.quiet and not args.json:
-                print ".: loading plugins ...",
-                sys.stdout.flush()
+                print(".: loading plugins ...", end=" ", flush=True)
             pluginLoader = imp.load_source('pluginLoader', 'modules/CVE_detection/pluginLoader.py')
             detectors = pluginLoader.pluginLoader(fileFormat, docType, fileName, extractionFolder, args, json_result)
             if not args.quiet and not args.json:
-                print "done"
-                sys.stdout.flush()
+                print("done", flush=True)
             detectors.runDetectors()
             if not args.quiet and not args.json:
-                print line
+                print(line)
             if extractionFolder:
                 try:
                     pass
                     #shutil.rmtree(extractionFolder)
-                except StandardError as e:
-                    print e
+                except Exception as error:
+                    print(error)
             if args.json:
                 if len(json_result['signatures'])>0:
                     json_result['threat index'] += 5
@@ -308,21 +301,21 @@ if __name__ == '__main__':
                         json_result['debug'].append('WARNING: document: ' + os.path.abspath(fileName) + ' seems to be damaged!')
                         json_result['debug'].append('this might be an indicator for embedded malware')
                     else:
-                        print 'WARNING: document: ' + os.path.abspath(fileName) + ' seems to be damaged!'
-                        print 'this might be an indicator for embedded malware'
+                        print('WARNING: document: ' + os.path.abspath(fileName) + ' seems to be damaged!')
+                        print('this might be an indicator for embedded malware')
                     break
                 else:
                     if args.json:
                         json_result['debug'].append('document: ' +  os.path.abspath(fileName) + ' caused ' + str(type(e)))
                         json_result['debug'].append(e.args)
                     else:
-                        print 'document: ' +  os.path.abspath(fileName) + ' caused ' + str(type(e))
-                        print e.args
+                        print(f'document: {os.path.abspath(fileName)} caused {type(e)}')
+                        print(e.args)
                     break
             if not args.quiet and not args.json:
-                print line
+                print(line)
             if args.json:
                 json_response.append(json_result)
             continue
     if args.json:
-        print json.dumps(json_response, sort_keys=False, indent=4, separators=(',', ': '))
+        print(json.dumps(json_response, sort_keys=False, indent=4, separators=(',', ': ')))
